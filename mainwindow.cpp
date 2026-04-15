@@ -118,6 +118,27 @@ QPushButton#ghostBtn:hover {
     border-color: rgba(255, 255, 255, 0.15);
 }
 
+/* ── SIDEBAR NAV BUTTON ────────────────────── */
+QPushButton#navBtn {
+    background: transparent;
+    color: #7070a0;
+    border-radius: 10px;
+    text-align: left;
+    padding: 0 16px;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+}
+QPushButton#navBtn:hover {
+    background: rgba(255, 107, 43, 0.08);
+    color: #e0e0f0;
+}
+QPushButton#navBtn:checked {
+    background: rgba(255, 107, 43, 0.14);
+    color: #ff6b2b;
+    font-weight: 700;
+}
+
 /* ── INPUT FIELDS ───────────────────────────── */
 QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {
     background-color: #1a1a24;
@@ -476,7 +497,7 @@ MainWindow::MainWindow(QWidget* parent)
 {
     m_platform = Platform::getInstance();
     setWindowTitle("ShopNova — Multi-Shop E-Commerce Platform");
-    resize(1200, 780);
+    resize(1280, 800);
     applyStyle();
 
     m_stack = new QStackedWidget(this);

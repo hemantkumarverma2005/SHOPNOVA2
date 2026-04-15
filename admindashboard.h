@@ -4,6 +4,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QFrame>
+#include "shellwidget.h"
 #include "datastore.h"
 
 class AdminDashboard : public QWidget {
@@ -23,17 +24,22 @@ private slots:
     void onToggleUser();
 
 private:
-    void buildUI();
     void refreshStats();
     void refreshProducts();
     void refreshOrders();
     void refreshSellers();
     void refreshCustomers();
 
+    QWidget *buildDashboardPage();
+    QWidget *buildProductsPage();
+    QWidget *buildOrdersPage();
+    QWidget *buildSellersPage();
+    QWidget *buildCustomersPage();
+
     Admin*    m_admin;
     Platform* m_platform;
+    ShellWidget *m_shell;
 
-    QLabel*       m_statsLabel;
     QFrame*       m_statCards[5];
     QTableWidget* m_productTable;
     QTableWidget* m_orderTable;

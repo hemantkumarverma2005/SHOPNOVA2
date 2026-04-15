@@ -4,6 +4,8 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QFrame>
+#include <QComboBox>
+#include "shellwidget.h"
 #include "datastore.h"
 
 class CustomerDashboard : public QWidget {
@@ -24,14 +26,20 @@ private slots:
     void onClearSearch();
 
 private:
-    void buildUI();
     void refreshProducts(QVector<Product*> products = {});
     void refreshCart();
     void refreshOrders();
     void refreshProfile();
 
+    QWidget *buildHomePage();
+    QWidget *buildShopPage();
+    QWidget *buildCartPage();
+    QWidget *buildOrdersPage();
+    QWidget *buildProfilePage();
+
     Customer* m_customer;
     Platform* m_platform;
+    ShellWidget *m_shell;
 
     QFrame*       m_statCards[4];
     QTableWidget* m_productTable;

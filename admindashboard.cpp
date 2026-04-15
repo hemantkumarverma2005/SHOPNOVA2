@@ -1,7 +1,7 @@
 #include "admindashboard.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
-#include <QTabWidget>
+#include <QGridLayout>
 #include <QHeaderView>
 #include <QMessageBox>
 #include <QInputDialog>
@@ -12,42 +12,34 @@
 #include <QComboBox>
 #include <QPushButton>
 #include <QLineEdit>
-#include <QFrame>
-#include <QGridLayout>
-
-AdminDashboard::AdminDashboard(Admin* admin, Platform* platform, QWidget* parent)
-    : QWidget(parent), m_admin(admin), m_platform(platform)
-{
-    buildUI();
-}
+#include <QScrollArea>
 
 // ── Helper: create a stat card widget ─────────────────────────
 static QFrame* makeStatCard(const QString& icon, const QString& value,
-                            const QString& label, const QString& glowColor)
+                            const QString& label, const QString& accent)
 {
     QFrame* card = new QFrame;
-    card->setStyleSheet(
-        QString("QFrame { background: #111118; border: 1px solid rgba(255,255,255,0.07); "
-                "border-radius: 16px; padding: 20px; }"
-                "QFrame:hover { border-color: %1; }").arg(glowColor));
+    card->setMinimumHeight(120);
+    card->setStyleSheet(QString(
+        "QFrame { background: #14142a; border: 1px solid #1e1e3a;"
+        "border-radius: 16px; }"));
+    QVBoxLayout* cl = new QVBoxLayout(card);
+    cl->setContentsMargins(20, 18, 20, 18);
+    cl->setSpacing(8);
 
-    QVBoxLayout* lay = new QVBoxLayout(card);
-    lay->setSpacing(6);
+    QLabel* ic = new QLabel(icon);
+    ic->setFixedSize(40, 40);
+    ic->setAlignment(Qt::AlignCenter);
+    ic->setStyleSheet(QString("background: %1; border-radius: 12px; font-size: 20px;").arg(accent));
+    QLabel* ttl = new QLabel(label);
+    ttl->setStyleSheet("font-size: 12px; color: #5a5a80; font-weight: 600;");
+    QLabel* val = new QLabel(value);
+    val->setObjectName("cardValue");
+    val->setStyleSheet("font-size: 28px; font-weight: 800; color: #e0e0f0;");
 
-    QLabel* iconLbl = new QLabel(icon);
-    iconLbl->setStyleSheet("font-size: 26px; background: transparent; border: none;");
-
-    QLabel* valLbl = new QLabel(value);
-    valLbl->setObjectName("cardValue");
-    valLbl->setStyleSheet("font-size: 26px; font-weight: 800; color: #f0f0f5; "
-                          "letter-spacing: -0.5px; background: transparent; border: none;");
-
-    QLabel* lblLbl = new QLabel(label);
-    lblLbl->setStyleSheet("font-size: 12px; color: #5a5a70; background: transparent; border: none;");
-
-    lay->addWidget(iconLbl);
-    lay->addWidget(valLbl);
-    lay->addWidget(lblLbl);
+    cl->addWidget(ic);
+    cl->addWidget(ttl);
+    cl->addWidget(val);
     return card;
 }
 
@@ -78,167 +70,238 @@ static QWidget* makeOrderStatusPill(OrderStatus status, const QString& text) {
     return makeStatusPill(text, objName);
 }
 
-void AdminDashboard::buildUI() {
-    QVBoxLayout* root = new QVBoxLayout(this);
-    root->setContentsMargins(24, 24, 24, 24);
-    root->setSpacing(16);
+AdminDashboard::AdminDashboard(Admin* admin, Platform* platform, QWidget* parent)
+    : QWidget(parent), m_admin(admin), m_platform(platform)
+{
+    QVBoxLayout *root = new QVBoxLayout(this);
+    root->setContentsMargins(0,0,0,0);
+    root->setSpacing(0);
 
-    // ─── Header ─────────────────────────────────────────
-    QHBoxLayout* header = new QHBoxLayout;
-    QLabel* title = new QLabel("Admin Dashboard");
-    title->setObjectName("pageTitle");
+    m_shell = new ShellWidget(this);
+    root->addWidget(m_shell);
 
-    QLabel* badge = new QLabel("  ADMIN  ");
-    badge->setObjectName("roleBadge");
-    badge->setStyleSheet(
-        "QLabel { background: rgba(255,107,43,0.15); color: #ff9a5c; "
-        "border: 1px solid rgba(255,107,43,0.3); border-radius: 20px; "
-        "padding: 5px 14px; font-size: 11px; font-weight: 700; }");
+    connect(m_shell, &ShellWidget::logoutRequested,
+            this, &AdminDashboard::logoutRequested);
 
-    QLabel* welcomeText = new QLabel("  Welcome, " + m_admin->getName());
-    welcomeText->setStyleSheet("color: #5a5a70; font-size: 13px;");
+    QVector<NavItem> nav = {
+        {"",                         "Overview",     nullptr},
+        {QString::fromUtf8("🏠"),    "Dashboard",    buildDashboardPage()},
+        {"",                         "Management",   nullptr},
+        {QString::fromUtf8("📦"),    "Products",     buildProductsPage()},
+        {QString::fromUtf8("📋"),    "All Orders",   buildOrdersPage()},
+        {QString::fromUtf8("🏪"),    "Sellers",      buildSellersPage()},
+        {QString::fromUtf8("👥"),    "Customers",    buildCustomersPage()},
+    };
 
-    QPushButton* logoutBtn = new QPushButton("Logout");
-    logoutBtn->setObjectName("logoutBtn");
-    connect(logoutBtn, &QPushButton::clicked, this, &AdminDashboard::logoutRequested);
+    m_shell->configure("ShopNova", m_admin->getName(), "Admin", nav);
+}
 
-    header->addWidget(title);
-    header->addSpacing(10);
-    header->addWidget(badge);
-    header->addWidget(welcomeText);
-    header->addStretch();
-    header->addWidget(logoutBtn);
-    root->addLayout(header);
+// ─── Page builders ───────────────────────────────────────────────────────────
 
-    // ─── Stats Grid ──────────────────────────────────────
-    m_statsLabel = new QLabel;
-    m_statsLabel->setVisible(false); // hidden, replaced by cards
+QWidget *AdminDashboard::buildDashboardPage() {
+    QScrollArea *scroll = new QScrollArea;
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setWidgetResizable(true);
 
-    QGridLayout* statsGrid = new QGridLayout;
-    statsGrid->setSpacing(12);
-    m_statCards[0] = makeStatCard("📦", "0", "Total Products", "#ff6b2b");
-    m_statCards[1] = makeStatCard("🛒", "0", "Total Orders",   "#4cc9f0");
-    m_statCards[2] = makeStatCard("👥", "0", "Customers",      "#06d6a0");
-    m_statCards[3] = makeStatCard("🏪", "0", "Sellers",        "#7b5ea7");
-    m_statCards[4] = makeStatCard("💰", "₹0", "Revenue",       "#ffd166");
+    QWidget *page = new QWidget;
+    QVBoxLayout *lay = new QVBoxLayout(page);
+    lay->setContentsMargins(32, 32, 32, 32);
+    lay->setSpacing(24);
+
+    QLabel *greet = new QLabel(QString::fromUtf8("Admin Dashboard"));
+    greet->setStyleSheet("font-size: 26px; font-weight: 800; color: #e0e0f0;");
+    lay->addWidget(greet);
+
+    QLabel *welcome = new QLabel(QString::fromUtf8("Welcome, %1 — manage your platform from here.").arg(m_admin->getName()));
+    welcome->setStyleSheet("font-size: 14px; color: #5a5a70;");
+    lay->addWidget(welcome);
+
+    // Stat cards row
+    QHBoxLayout *statsRow = new QHBoxLayout;
+    statsRow->setSpacing(16);
+
+    m_statCards[0] = makeStatCard(QString::fromUtf8("📦"), "0", "Total Products", "rgba(255,107,43,0.15)");
+    m_statCards[1] = makeStatCard(QString::fromUtf8("🛒"), "0", "Total Orders",   "rgba(76,201,240,0.15)");
+    m_statCards[2] = makeStatCard(QString::fromUtf8("👥"), "0", "Customers",      "rgba(6,214,160,0.15)");
+    m_statCards[3] = makeStatCard(QString::fromUtf8("🏪"), "0", "Sellers",        "rgba(123,94,167,0.15)");
+    m_statCards[4] = makeStatCard(QString::fromUtf8("💰"), QString::fromUtf8("₹0"), "Revenue", "rgba(255,209,102,0.15)");
 
     for (int i = 0; i < 5; ++i)
-        statsGrid->addWidget(m_statCards[i], 0, i);
+        statsRow->addWidget(m_statCards[i]);
+    lay->addLayout(statsRow);
 
-    root->addLayout(statsGrid);
+    QLabel *hint = new QLabel("Navigate using the sidebar to manage products, orders, sellers, and customers.");
+    hint->setStyleSheet("font-size: 13px; color: #5a5a70;");
+    hint->setWordWrap(true);
+    lay->addWidget(hint);
 
-    // ─── Tabs ────────────────────────────────────────────
-    QTabWidget* tabs = new QTabWidget;
-    root->addWidget(tabs);
-
-    // ── Products tab ──
-    {
-        QWidget* tab = new QWidget;
-        QVBoxLayout* lay = new QVBoxLayout(tab);
-        lay->setContentsMargins(8, 12, 8, 8);
-        QHBoxLayout* btns = new QHBoxLayout;
-        QPushButton* addBtn = new QPushButton("  Add Product  ");
-        addBtn->setObjectName("successBtn");
-        QPushButton* toggleBtn = new QPushButton("  Toggle Active  ");
-        toggleBtn->setObjectName("ghostBtn");
-        connect(addBtn,    &QPushButton::clicked, this, &AdminDashboard::onAddProduct);
-        connect(toggleBtn, &QPushButton::clicked, this, &AdminDashboard::onToggleProduct);
-        btns->addWidget(addBtn);
-        btns->addWidget(toggleBtn);
-        btns->addStretch();
-
-        m_productTable = new QTableWidget(0, 7);
-        m_productTable->setHorizontalHeaderLabels({"ID", "Name", "Type", "Brand", "Price", "Stock", "Status"});
-        m_productTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-        m_productTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-        m_productTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-        m_productTable->setAlternatingRowColors(true);
-        m_productTable->verticalHeader()->setVisible(false);
-        m_productTable->setShowGrid(false);
-
-        lay->addLayout(btns);
-        lay->addWidget(m_productTable);
-        tabs->addTab(tab, "  Products  ");
-    }
-
-    // ── Orders tab ──
-    {
-        QWidget* tab = new QWidget;
-        QVBoxLayout* lay = new QVBoxLayout(tab);
-        lay->setContentsMargins(8, 12, 8, 8);
-        QHBoxLayout* btns = new QHBoxLayout;
-        QPushButton* updateBtn = new QPushButton("  Update Status  ");
-        updateBtn->setObjectName("primaryBtn");
-        connect(updateBtn, &QPushButton::clicked, this, &AdminDashboard::onUpdateOrderStatus);
-        btns->addWidget(updateBtn);
-        btns->addStretch();
-
-        m_orderTable = new QTableWidget(0, 6);
-        m_orderTable->setHorizontalHeaderLabels({"Order #", "Customer", "Items", "Amount", "Payment", "Status"});
-        m_orderTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-        m_orderTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-        m_orderTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-        m_orderTable->setAlternatingRowColors(true);
-        m_orderTable->verticalHeader()->setVisible(false);
-        m_orderTable->setShowGrid(false);
-
-        lay->addLayout(btns);
-        lay->addWidget(m_orderTable);
-        tabs->addTab(tab, "  Orders  ");
-    }
-
-    // ── Sellers tab ──
-    {
-        QWidget* tab = new QWidget;
-        QVBoxLayout* lay = new QVBoxLayout(tab);
-        lay->setContentsMargins(8, 12, 8, 8);
-        QHBoxLayout* btns = new QHBoxLayout;
-        QPushButton* verifyBtn = new QPushButton("  Verify Seller  ");
-        verifyBtn->setObjectName("successBtn");
-        connect(verifyBtn, &QPushButton::clicked, this, &AdminDashboard::onVerifySeller);
-        btns->addWidget(verifyBtn);
-        btns->addStretch();
-
-        m_sellerTable = new QTableWidget(0, 5);
-        m_sellerTable->setHorizontalHeaderLabels({"ID", "Name", "Store", "Email", "Status"});
-        m_sellerTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-        m_sellerTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-        m_sellerTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-        m_sellerTable->setAlternatingRowColors(true);
-        m_sellerTable->verticalHeader()->setVisible(false);
-        m_sellerTable->setShowGrid(false);
-
-        lay->addLayout(btns);
-        lay->addWidget(m_sellerTable);
-        tabs->addTab(tab, "  Sellers  ");
-    }
-
-    // ── Customers tab ──
-    {
-        QWidget* tab = new QWidget;
-        QVBoxLayout* lay = new QVBoxLayout(tab);
-        lay->setContentsMargins(8, 12, 8, 8);
-        QHBoxLayout* btns = new QHBoxLayout;
-        QPushButton* toggleUserBtn = new QPushButton("  Toggle Active  ");
-        toggleUserBtn->setObjectName("dangerBtn");
-        connect(toggleUserBtn, &QPushButton::clicked, this, &AdminDashboard::onToggleUser);
-        btns->addWidget(toggleUserBtn);
-        btns->addStretch();
-
-        m_customerTable = new QTableWidget(0, 5);
-        m_customerTable->setHorizontalHeaderLabels({"ID", "Name", "Email", "Tier", "Status"});
-        m_customerTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-        m_customerTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-        m_customerTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-        m_customerTable->setAlternatingRowColors(true);
-        m_customerTable->verticalHeader()->setVisible(false);
-        m_customerTable->setShowGrid(false);
-
-        lay->addLayout(btns);
-        lay->addWidget(m_customerTable);
-        tabs->addTab(tab, "  Customers  ");
-    }
+    lay->addStretch();
+    scroll->setWidget(page);
+    return scroll;
 }
+
+QWidget *AdminDashboard::buildProductsPage() {
+    QScrollArea *scroll = new QScrollArea;
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setWidgetResizable(true);
+
+    QWidget *page = new QWidget;
+    QVBoxLayout *lay = new QVBoxLayout(page);
+    lay->setContentsMargins(32, 32, 32, 32);
+    lay->setSpacing(20);
+
+    QLabel *h = new QLabel(QString::fromUtf8("📦  Products"));
+    h->setStyleSheet("font-size: 24px; font-weight: 800; color: #e0e0f0;");
+    lay->addWidget(h);
+
+    QHBoxLayout* btns = new QHBoxLayout;
+    QPushButton* addBtn = new QPushButton("  Add Product  ");
+    addBtn->setObjectName("successBtn");
+    QPushButton* toggleBtn = new QPushButton("  Toggle Active  ");
+    toggleBtn->setObjectName("ghostBtn");
+    addBtn->setMinimumHeight(38);
+    toggleBtn->setMinimumHeight(38);
+    connect(addBtn,    &QPushButton::clicked, this, &AdminDashboard::onAddProduct);
+    connect(toggleBtn, &QPushButton::clicked, this, &AdminDashboard::onToggleProduct);
+    btns->addWidget(addBtn);
+    btns->addWidget(toggleBtn);
+    btns->addStretch();
+    lay->addLayout(btns);
+
+    m_productTable = new QTableWidget(0, 7);
+    m_productTable->setHorizontalHeaderLabels({"ID", "Name", "Type", "Brand", "Price", "Stock", "Status"});
+    m_productTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    m_productTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_productTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_productTable->setAlternatingRowColors(true);
+    m_productTable->verticalHeader()->setVisible(false);
+    m_productTable->setShowGrid(false);
+    m_productTable->setMinimumHeight(400);
+    lay->addWidget(m_productTable);
+
+    lay->addStretch();
+    scroll->setWidget(page);
+    return scroll;
+}
+
+QWidget *AdminDashboard::buildOrdersPage() {
+    QScrollArea *scroll = new QScrollArea;
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setWidgetResizable(true);
+
+    QWidget *page = new QWidget;
+    QVBoxLayout *lay = new QVBoxLayout(page);
+    lay->setContentsMargins(32, 32, 32, 32);
+    lay->setSpacing(20);
+
+    QLabel *h = new QLabel(QString::fromUtf8("📋  All Orders"));
+    h->setStyleSheet("font-size: 24px; font-weight: 800; color: #e0e0f0;");
+    lay->addWidget(h);
+
+    QHBoxLayout* btns = new QHBoxLayout;
+    QPushButton* updateBtn = new QPushButton("  Update Status  ");
+    updateBtn->setObjectName("primaryBtn");
+    updateBtn->setMinimumHeight(38);
+    connect(updateBtn, &QPushButton::clicked, this, &AdminDashboard::onUpdateOrderStatus);
+    btns->addWidget(updateBtn);
+    btns->addStretch();
+    lay->addLayout(btns);
+
+    m_orderTable = new QTableWidget(0, 6);
+    m_orderTable->setHorizontalHeaderLabels({"Order #", "Customer", "Items", "Amount", "Payment", "Status"});
+    m_orderTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    m_orderTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_orderTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_orderTable->setAlternatingRowColors(true);
+    m_orderTable->verticalHeader()->setVisible(false);
+    m_orderTable->setShowGrid(false);
+    m_orderTable->setMinimumHeight(400);
+    lay->addWidget(m_orderTable);
+
+    lay->addStretch();
+    scroll->setWidget(page);
+    return scroll;
+}
+
+QWidget *AdminDashboard::buildSellersPage() {
+    QScrollArea *scroll = new QScrollArea;
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setWidgetResizable(true);
+
+    QWidget *page = new QWidget;
+    QVBoxLayout *lay = new QVBoxLayout(page);
+    lay->setContentsMargins(32, 32, 32, 32);
+    lay->setSpacing(20);
+
+    QLabel *h = new QLabel(QString::fromUtf8("🏪  Sellers"));
+    h->setStyleSheet("font-size: 24px; font-weight: 800; color: #e0e0f0;");
+    lay->addWidget(h);
+
+    QHBoxLayout* btns = new QHBoxLayout;
+    QPushButton* verifyBtn = new QPushButton("  Verify Seller  ");
+    verifyBtn->setObjectName("successBtn");
+    verifyBtn->setMinimumHeight(38);
+    connect(verifyBtn, &QPushButton::clicked, this, &AdminDashboard::onVerifySeller);
+    btns->addWidget(verifyBtn);
+    btns->addStretch();
+    lay->addLayout(btns);
+
+    m_sellerTable = new QTableWidget(0, 5);
+    m_sellerTable->setHorizontalHeaderLabels({"ID", "Name", "Store", "Email", "Status"});
+    m_sellerTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    m_sellerTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_sellerTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_sellerTable->setAlternatingRowColors(true);
+    m_sellerTable->verticalHeader()->setVisible(false);
+    m_sellerTable->setShowGrid(false);
+    m_sellerTable->setMinimumHeight(400);
+    lay->addWidget(m_sellerTable);
+
+    lay->addStretch();
+    scroll->setWidget(page);
+    return scroll;
+}
+
+QWidget *AdminDashboard::buildCustomersPage() {
+    QScrollArea *scroll = new QScrollArea;
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setWidgetResizable(true);
+
+    QWidget *page = new QWidget;
+    QVBoxLayout *lay = new QVBoxLayout(page);
+    lay->setContentsMargins(32, 32, 32, 32);
+    lay->setSpacing(20);
+
+    QLabel *h = new QLabel(QString::fromUtf8("👥  Customers"));
+    h->setStyleSheet("font-size: 24px; font-weight: 800; color: #e0e0f0;");
+    lay->addWidget(h);
+
+    QHBoxLayout* btns = new QHBoxLayout;
+    QPushButton* toggleUserBtn = new QPushButton("  Toggle Active  ");
+    toggleUserBtn->setObjectName("dangerBtn");
+    toggleUserBtn->setMinimumHeight(38);
+    connect(toggleUserBtn, &QPushButton::clicked, this, &AdminDashboard::onToggleUser);
+    btns->addWidget(toggleUserBtn);
+    btns->addStretch();
+    lay->addLayout(btns);
+
+    m_customerTable = new QTableWidget(0, 5);
+    m_customerTable->setHorizontalHeaderLabels({"ID", "Name", "Email", "Tier", "Status"});
+    m_customerTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    m_customerTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_customerTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_customerTable->setAlternatingRowColors(true);
+    m_customerTable->verticalHeader()->setVisible(false);
+    m_customerTable->setShowGrid(false);
+    m_customerTable->setMinimumHeight(400);
+    lay->addWidget(m_customerTable);
+
+    lay->addStretch();
+    scroll->setWidget(page);
+    return scroll;
+}
+
+// ─── Refresh logic ───────────────────────────────────────────────────────────
 
 void AdminDashboard::refresh() {
     refreshStats();
@@ -250,7 +313,6 @@ void AdminDashboard::refresh() {
 
 void AdminDashboard::refreshStats() {
     auto s = m_platform->getStats();
-    // Update stat card values
     auto updateCard = [](QFrame* card, const QString& val) {
         QLabel* valLbl = card->findChild<QLabel*>("cardValue");
         if (valLbl) valLbl->setText(val);
@@ -275,7 +337,7 @@ void AdminDashboard::refreshProducts() {
         m_productTable->setItem(row, 5, new QTableWidgetItem(QString::number(prod->getStock())));
 
         // Status pill
-        QString statusText = prod->getIsActive() ? "● Active" : "● Inactive";
+        QString statusText = prod->getIsActive() ? QString::fromUtf8("● Active") : QString::fromUtf8("● Inactive");
         QString objName = prod->getIsActive() ? "statusActive" : "statusInactive";
         m_productTable->setCellWidget(row, 6, makeStatusPill(statusText, objName));
         m_productTable->setRowHeight(row, 40);
@@ -310,7 +372,7 @@ void AdminDashboard::refreshSellers() {
         m_sellerTable->setItem(row, 3, new QTableWidgetItem(s->getEmail()));
 
         // Status pill
-        QString statusText = s->getIsVerified() ? "✓ Verified" : "⏳ Pending";
+        QString statusText = s->getIsVerified() ? QString::fromUtf8("✓ Verified") : QString::fromUtf8("⏳ Pending");
         QString objName = s->getIsVerified() ? "statusVerified" : "statusPending";
         m_sellerTable->setCellWidget(row, 4, makeStatusPill(statusText, objName));
         m_sellerTable->setRowHeight(row, 40);
@@ -328,12 +390,14 @@ void AdminDashboard::refreshCustomers() {
         m_customerTable->setItem(row, 3, new QTableWidgetItem(c->getMembershipTier()));
 
         // Status pill
-        QString statusText = c->getIsActive() ? "● Active" : "● Banned";
+        QString statusText = c->getIsActive() ? QString::fromUtf8("● Active") : QString::fromUtf8("● Banned");
         QString objName = c->getIsActive() ? "statusActive" : "statusInactive";
         m_customerTable->setCellWidget(row, 4, makeStatusPill(statusText, objName));
         m_customerTable->setRowHeight(row, 40);
     }
 }
+
+// ─── Slot implementations ────────────────────────────────────────────────────
 
 void AdminDashboard::onAddProduct() {
     QDialog dlg(this);
@@ -436,7 +500,7 @@ void AdminDashboard::onUpdateOrderStatus() {
     else                            ns = OrderStatus::CANCELLED;
 
     if (m_platform->updateOrderStatus(oid, ns)) {
-        m_admin->logAction("Updated order #" + QString::number(oid) + " → " + chosen);
+        m_admin->logAction("Updated order #" + QString::number(oid) + QString::fromUtf8(" → ") + chosen);
         refreshOrders();
         QMessageBox::information(this, "Updated", "Order status updated.");
     }

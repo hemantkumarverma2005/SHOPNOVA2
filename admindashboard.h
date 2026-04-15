@@ -3,6 +3,7 @@
 #include <QTableWidget>
 #include <QLabel>
 #include <QPushButton>
+#include <QFrame>
 #include "datastore.h"
 
 class AdminDashboard : public QWidget {
@@ -33,6 +34,7 @@ private:
     Platform* m_platform;
 
     QLabel*       m_statsLabel;
+    QFrame*       m_statCards[5];
     QTableWidget* m_productTable;
     QTableWidget* m_orderTable;
     QTableWidget* m_sellerTable;

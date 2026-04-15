@@ -1,6 +1,7 @@
 #include "customerdashboard.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QGridLayout>
 #include <QTabWidget>
 #include <QHeaderView>
 #include <QMessageBox>
@@ -8,6 +9,63 @@
 #include <QComboBox>
 #include <QGroupBox>
 #include <QPushButton>
+
+// ── Helper: create a stat card widget ─────────────────────────
+static QFrame* makeStatCard(const QString& icon, const QString& value,
+                            const QString& label, const QString& glowColor)
+{
+    QFrame* card = new QFrame;
+    card->setStyleSheet(
+        QString("QFrame { background: #111118; border: 1px solid rgba(255,255,255,0.07); "
+                "border-radius: 16px; padding: 20px; }"
+                "QFrame:hover { border-color: %1; }").arg(glowColor));
+
+    QVBoxLayout* lay = new QVBoxLayout(card);
+    lay->setSpacing(6);
+
+    QLabel* iconLbl = new QLabel(icon);
+    iconLbl->setStyleSheet("font-size: 26px; background: transparent; border: none;");
+
+    QLabel* valLbl = new QLabel(value);
+    valLbl->setObjectName("cardValue");
+    valLbl->setStyleSheet("font-size: 26px; font-weight: 800; color: #f0f0f5; "
+                          "letter-spacing: -0.5px; background: transparent; border: none;");
+
+    QLabel* lblLbl = new QLabel(label);
+    lblLbl->setStyleSheet("font-size: 12px; color: #5a5a70; background: transparent; border: none;");
+
+    lay->addWidget(iconLbl);
+    lay->addWidget(valLbl);
+    lay->addWidget(lblLbl);
+    return card;
+}
+
+// ── Helper: create a status pill QLabel ────────────────────────
+static QWidget* makeStatusPill(const QString& text, const QString& objectName) {
+    QWidget* container = new QWidget;
+    QHBoxLayout* hlay = new QHBoxLayout(container);
+    hlay->setContentsMargins(0, 2, 0, 2);
+    hlay->setAlignment(Qt::AlignLeft);
+    QLabel* pill = new QLabel(text);
+    pill->setObjectName(objectName);
+    pill->setAlignment(Qt::AlignCenter);
+    pill->setFixedHeight(24);
+    hlay->addWidget(pill);
+    return container;
+}
+
+static QWidget* makeOrderStatusPill(OrderStatus status, const QString& text) {
+    QString objName;
+    switch (status) {
+        case OrderStatus::PENDING:   objName = "statusPending"; break;
+        case OrderStatus::CONFIRMED: objName = "statusConfirmed"; break;
+        case OrderStatus::SHIPPED:   objName = "statusShipped"; break;
+        case OrderStatus::DELIVERED: objName = "statusDelivered"; break;
+        case OrderStatus::CANCELLED: objName = "statusCancelled"; break;
+        case OrderStatus::RETURNED:  objName = "statusReturned"; break;
+    }
+    return makeStatusPill(text, objName);
+}
 
 CustomerDashboard::CustomerDashboard(Customer* customer, Platform* platform, QWidget* parent)
     : QWidget(parent), m_customer(customer), m_platform(platform)
@@ -17,13 +75,16 @@ CustomerDashboard::CustomerDashboard(Customer* customer, Platform* platform, QWi
 
 void CustomerDashboard::buildUI() {
     QVBoxLayout* root = new QVBoxLayout(this);
-    root->setContentsMargins(16, 16, 16, 16);
-    root->setSpacing(10);
+    root->setContentsMargins(24, 24, 24, 24);
+    root->setSpacing(16);
 
     // ─── Header ─────────────────────────────────────────
     QHBoxLayout* header = new QHBoxLayout;
     QLabel* title = new QLabel("🛍️  " + m_customer->getName() + "'s ShopNova");
     title->setObjectName("pageTitle");
+
+    QLabel* badge = new QLabel("  " + m_customer->getMembershipTier().toUpper() + "  ");
+    badge->setObjectName("customerBadge");
 
     m_notifLabel = new QLabel;
     m_notifLabel->setObjectName("notifLabel");
@@ -33,10 +94,42 @@ void CustomerDashboard::buildUI() {
     connect(logoutBtn, &QPushButton::clicked, this, &CustomerDashboard::logoutRequested);
 
     header->addWidget(title);
+    header->addSpacing(8);
+    header->addWidget(badge);
     header->addStretch();
     header->addWidget(m_notifLabel);
     header->addWidget(logoutBtn);
     root->addLayout(header);
+
+    // ─── Welcome Banner ─────────────────────────────────
+    QFrame* banner = new QFrame;
+    banner->setObjectName("welcomeBanner");
+    QHBoxLayout* bannerLay = new QHBoxLayout(banner);
+    bannerLay->setSpacing(24);
+
+    QVBoxLayout* bannerText = new QVBoxLayout;
+    QLabel* welcomeTitle = new QLabel("Welcome back, " + m_customer->getName() + "! 👋");
+    welcomeTitle->setStyleSheet("font-size: 20px; font-weight: 700; color: #f0f0f5; letter-spacing: -0.5px;");
+    QLabel* welcomeSub = new QLabel("Explore products, manage your orders, and track deliveries.");
+    welcomeSub->setStyleSheet("font-size: 13px; color: #5a5a70;");
+    bannerText->addWidget(welcomeTitle);
+    bannerText->addWidget(welcomeSub);
+    bannerText->addStretch();
+    bannerLay->addLayout(bannerText, 1);
+
+    root->addWidget(banner);
+
+    // ─── Stats Grid ──────────────────────────────────────
+    QGridLayout* statsGrid = new QGridLayout;
+    statsGrid->setSpacing(12);
+    m_statCards[0] = makeStatCard("💰", "₹0", "Wallet Balance", "#06d6a0");
+    m_statCards[1] = makeStatCard("🏆", "0", "Reward Points", "#ffd166");
+    m_statCards[2] = makeStatCard("📦", "0", "Total Orders", "#4cc9f0");
+    m_statCards[3] = makeStatCard("⭐", "-", "Membership", "#7b5ea7");
+
+    for (int i = 0; i < 4; ++i)
+        statsGrid->addWidget(m_statCards[i], 0, i);
+    root->addLayout(statsGrid);
 
     // ─── Tabs ─────────────────────────────────────────────
     QTabWidget* tabs = new QTabWidget;
@@ -51,6 +144,10 @@ void CustomerDashboard::buildUI() {
         QHBoxLayout* searchRow = new QHBoxLayout;
         m_searchEdit = new QLineEdit;
         m_searchEdit->setPlaceholderText("🔍  Search products, brands, categories...");
+        m_searchEdit->setMinimumHeight(40);
+        m_searchEdit->setStyleSheet(
+            "QLineEdit { border-radius: 20px; padding-left: 18px; font-size: 14px; }");
+
         QPushButton* searchBtn  = new QPushButton("Search");  searchBtn->setObjectName("primaryBtn");
         QPushButton* clearBtn   = new QPushButton("All");     clearBtn->setObjectName("logoutBtn");
 
@@ -66,10 +163,14 @@ void CustomerDashboard::buildUI() {
             else refreshProducts(m_platform->getProductsByCategory(cat));
         });
 
-        searchRow->addWidget(m_searchEdit);
+        QLabel* catLabel = new QLabel("Category:");
+        catLabel->setStyleSheet("color: #9494a8; font-size: 13px;");
+
+        searchRow->addWidget(m_searchEdit, 1);
         searchRow->addWidget(searchBtn);
         searchRow->addWidget(clearBtn);
-        searchRow->addWidget(new QLabel("Category:"));
+        searchRow->addSpacing(8);
+        searchRow->addWidget(catLabel);
         searchRow->addWidget(catCombo);
 
         lay->addLayout(searchRow);
@@ -80,10 +181,13 @@ void CustomerDashboard::buildUI() {
         m_productTable->setSelectionBehavior(QAbstractItemView::SelectRows);
         m_productTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
         m_productTable->setAlternatingRowColors(true);
+        m_productTable->verticalHeader()->setVisible(false);
+        m_productTable->setShowGrid(false);
 
         QHBoxLayout* btns = new QHBoxLayout;
         QPushButton* addCartBtn = new QPushButton("🛒 Add to Cart");
         addCartBtn->setObjectName("successBtn");
+        addCartBtn->setMinimumHeight(38);
         connect(addCartBtn, &QPushButton::clicked, this, &CustomerDashboard::onAddToCart);
         btns->addWidget(addCartBtn);
         btns->addStretch();
@@ -104,10 +208,14 @@ void CustomerDashboard::buildUI() {
         m_cartTable->setSelectionBehavior(QAbstractItemView::SelectRows);
         m_cartTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
         m_cartTable->setAlternatingRowColors(true);
+        m_cartTable->verticalHeader()->setVisible(false);
+        m_cartTable->setShowGrid(false);
 
         QHBoxLayout* btns = new QHBoxLayout;
         QPushButton* removeBtn   = new QPushButton("🗑 Remove");    removeBtn->setObjectName("dangerBtn");
         QPushButton* checkoutBtn = new QPushButton("💳 Checkout");  checkoutBtn->setObjectName("warnBtn");
+        removeBtn->setMinimumHeight(38);
+        checkoutBtn->setMinimumHeight(38);
         m_cartTotalLabel = new QLabel("Total: ₹0");
         m_cartTotalLabel->setObjectName("balanceLabel");
 
@@ -135,10 +243,13 @@ void CustomerDashboard::buildUI() {
         m_orderTable->setSelectionBehavior(QAbstractItemView::SelectRows);
         m_orderTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
         m_orderTable->setAlternatingRowColors(true);
+        m_orderTable->verticalHeader()->setVisible(false);
+        m_orderTable->setShowGrid(false);
 
         QHBoxLayout* btns = new QHBoxLayout;
         QPushButton* cancelBtn = new QPushButton("❌ Cancel Order");
         cancelBtn->setObjectName("dangerBtn");
+        cancelBtn->setMinimumHeight(38);
         connect(cancelBtn, &QPushButton::clicked, this, &CustomerDashboard::onCancelOrder);
         btns->addWidget(cancelBtn);
         btns->addStretch();
@@ -170,6 +281,16 @@ void CustomerDashboard::refresh() {
     else
         m_notifLabel->clear();
 
+    // Update stat cards
+    auto updateCard = [](QFrame* card, const QString& val) {
+        QLabel* valLbl = card->findChild<QLabel*>("cardValue");
+        if (valLbl) valLbl->setText(val);
+    };
+    updateCard(m_statCards[0], "₹" + QString::number((int)m_customer->getWalletBalance()));
+    updateCard(m_statCards[1], QString::number(m_customer->getRewardPoints()));
+    updateCard(m_statCards[2], QString::number(m_customer->getOrderIds().size()));
+    updateCard(m_statCards[3], m_customer->getMembershipTier());
+
     refreshProducts();
     refreshCart();
     refreshOrders();
@@ -191,13 +312,19 @@ void CustomerDashboard::refreshProducts(QVector<Product*> products) {
         m_productTable->setItem(row, 2, new QTableWidgetItem(p->getBrand()));
         m_productTable->setItem(row, 3, new QTableWidgetItem(p->getCategory()));
         m_productTable->setItem(row, 4, new QTableWidgetItem("₹" + QString::number((int)p->getDiscountedPrice())));
+
+        // Discount column with accent color
         QString discStr = p->getDiscount() > 0 ? QString::number((int)p->getDiscount()) + "%" : "-";
         auto* dItem = new QTableWidgetItem(discStr);
-        if (p->getDiscount() > 0) dItem->setForeground(QColor("#a6e3a1"));
+        if (p->getDiscount() > 0) dItem->setForeground(QColor("#06d6a0"));
         m_productTable->setItem(row, 5, dItem);
+
+        // Stock with color coding
         auto* sItem = new QTableWidgetItem(QString::number(p->getStock()));
-        if (p->getStock() == 0) { sItem->setForeground(QColor("#f38ba8")); sItem->setText("Out"); }
+        if (p->getStock() == 0) { sItem->setForeground(QColor("#ff4444")); sItem->setText("Out"); }
+        else if (p->getStock() <= 5) { sItem->setForeground(QColor("#ffd166")); }
         m_productTable->setItem(row, 6, sItem);
+        m_productTable->setRowHeight(row, 38);
     }
 }
 
@@ -209,7 +336,10 @@ void CustomerDashboard::refreshCart() {
         m_cartTable->setItem(row, 0, new QTableWidgetItem(item.productName));
         m_cartTable->setItem(row, 1, new QTableWidgetItem("₹" + QString::number((int)(item.price * (1 - item.discountPercent/100)))));
         m_cartTable->setItem(row, 2, new QTableWidgetItem(QString::number(item.quantity)));
-        m_cartTable->setItem(row, 3, new QTableWidgetItem("₹" + QString::number((int)item.getTotal())));
+        auto* totalItem = new QTableWidgetItem("₹" + QString::number((int)item.getTotal()));
+        totalItem->setForeground(QColor("#ff9a5c"));
+        m_cartTable->setItem(row, 3, totalItem);
+        m_cartTable->setRowHeight(row, 38);
     }
     double total = m_customer->getCart().getTotal();
     double delivery = m_customer->getCart().getDeliveryCharge();
@@ -224,25 +354,42 @@ void CustomerDashboard::refreshOrders() {
         m_orderTable->insertRow(row);
         m_orderTable->setItem(row, 0, new QTableWidgetItem("#" + QString::number(o->getId())));
         m_orderTable->setItem(row, 1, new QTableWidgetItem(o->getOrderDate()));
-        m_orderTable->setItem(row, 2, new QTableWidgetItem("₹" + QString::number((int)o->getTotalAmount())));
+        auto* amtItem = new QTableWidgetItem("₹" + QString::number((int)o->getTotalAmount()));
+        amtItem->setForeground(QColor("#ff9a5c"));
+        m_orderTable->setItem(row, 2, amtItem);
         m_orderTable->setItem(row, 3, new QTableWidgetItem(o->getPayment().methodString()));
-        auto* s = new QTableWidgetItem(o->statusString());
-        s->setForeground(o->getStatus() == OrderStatus::DELIVERED ? QColor("#a6e3a1") :
-                         o->getStatus() == OrderStatus::CANCELLED  ? QColor("#f38ba8") : QColor("#fab387"));
-        m_orderTable->setItem(row, 4, s);
+
+        // Status pill
+        m_orderTable->setCellWidget(row, 4, makeOrderStatusPill(o->getStatus(), o->statusString()));
+        m_orderTable->setRowHeight(row, 40);
     }
 }
 
 void CustomerDashboard::refreshProfile() {
     Address* addr = m_customer->getDefaultAddress();
     m_profileLabel->setText(
-        QString("👤  <b>%1</b>   [%2 Member]<br><br>"
-                "📧  %3<br>"
-                "📱  %4<br>"
-                "💰  Wallet: ₹%5<br>"
-                "🏆  Points: %6<br>"
-                "🛒  Orders: %7<br>"
-                "📍  %8")
+        QString("<div style='line-height: 2.2;'>"
+                "<span style='font-size: 22px; font-weight: 800; color: #f0f0f5;'>👤  %1</span>"
+                "<br>"
+                "<span style='background: rgba(76,201,240,0.15); color: #4cc9f0; "
+                "border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 700;'>"
+                "%2 Member</span>"
+                "<br><br>"
+                "<span style='color: #5a5a70; font-size: 12px; text-transform: uppercase; "
+                "letter-spacing: 1px;'>CONTACT</span><br>"
+                "📧  <span style='color: #9494a8;'>%3</span><br>"
+                "📱  <span style='color: #9494a8;'>%4</span>"
+                "<br><br>"
+                "<span style='color: #5a5a70; font-size: 12px; text-transform: uppercase; "
+                "letter-spacing: 1px;'>ACCOUNT</span><br>"
+                "💰  Wallet: <span style='color: #06d6a0; font-weight: 700;'>₹%5</span><br>"
+                "🏆  Points: <span style='color: #ffd166; font-weight: 700;'>%6</span><br>"
+                "🛒  Orders: <span style='color: #4cc9f0; font-weight: 700;'>%7</span>"
+                "<br><br>"
+                "<span style='color: #5a5a70; font-size: 12px; text-transform: uppercase; "
+                "letter-spacing: 1px;'>ADDRESS</span><br>"
+                "📍  <span style='color: #9494a8;'>%8</span>"
+                "</div>")
         .arg(m_customer->getName())
         .arg(m_customer->getMembershipTier())
         .arg(m_customer->getEmail())

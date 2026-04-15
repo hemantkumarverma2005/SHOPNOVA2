@@ -3,6 +3,7 @@
 #include <QTableWidget>
 #include <QLabel>
 #include <QLineEdit>
+#include <QFrame>
 #include "datastore.h"
 
 class CustomerDashboard : public QWidget {
@@ -32,6 +33,7 @@ private:
     Customer* m_customer;
     Platform* m_platform;
 
+    QFrame*       m_statCards[4];
     QTableWidget* m_productTable;
     QTableWidget* m_cartTable;
     QTableWidget* m_orderTable;

@@ -2,6 +2,7 @@
 #include <QWidget>
 #include <QTableWidget>
 #include <QLabel>
+#include <QFrame>
 #include "datastore.h"
 
 class SellerDashboard : public QWidget {
@@ -28,6 +29,7 @@ private:
     Platform* m_platform;
 
     QLabel*       m_dashLabel;
+    QFrame*       m_statCards[4];
     QTableWidget* m_productTable;
     QTableWidget* m_orderTable;
 };

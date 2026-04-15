@@ -1,0 +1,42 @@
+#pragma once
+#include <QWidget>
+#include <QTableWidget>
+#include <QLabel>
+#include <QLineEdit>
+#include "datastore.h"
+
+class CustomerDashboard : public QWidget {
+    Q_OBJECT
+public:
+    explicit CustomerDashboard(Customer* customer, Platform* platform, QWidget* parent = nullptr);
+    void refresh();
+
+signals:
+    void logoutRequested();
+
+private slots:
+    void onAddToCart();
+    void onRemoveFromCart();
+    void onCheckout();
+    void onCancelOrder();
+    void onSearch();
+    void onClearSearch();
+
+private:
+    void buildUI();
+    void refreshProducts(QVector<Product*> products = {});
+    void refreshCart();
+    void refreshOrders();
+    void refreshProfile();
+
+    Customer* m_customer;
+    Platform* m_platform;
+
+    QTableWidget* m_productTable;
+    QTableWidget* m_cartTable;
+    QTableWidget* m_orderTable;
+    QLabel*       m_cartTotalLabel;
+    QLabel*       m_profileLabel;
+    QLabel*       m_notifLabel;
+    QLineEdit*    m_searchEdit;
+};

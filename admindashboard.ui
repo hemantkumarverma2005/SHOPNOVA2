@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>AdminDashboard</class>
+ <widget class="QWidget" name="AdminDashboard">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1000</width>
+    <height>700</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Admin Dashboard</string>
+  </property>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <item>
+    <widget class="ShellWidget" name="shell" native="true"/>
+   </item>
+   <item>
+    <widget class="QStackedWidget" name="stackedWidget">
+     
+     <widget class="QWidget" name="dashboardPage">
+      <layout class="QVBoxLayout" name="dashLayout">
+       <item>
+        <widget class="QLabel" name="greetLbl">
+         <property name="text">
+          <string>Welcome</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="a_statsRow"/>
+       </item>
+      </layout>
+     </widget>
+
+     <widget class="QWidget" name="productsPage">
+      <layout class="QVBoxLayout" name="prodLayout">
+       <item>
+        <layout class="QHBoxLayout" name="prodButtons">
+         <item><widget class="QPushButton" name="a_addProdBtn"><property name="text"><string>Add Product</string></property></widget></item>
+         <item><widget class="QPushButton" name="a_toggleProdBtn"><property name="text"><string>Toggle Status</string></property></widget></item>
+         <item><widget class="QPushButton" name="a_deleteProdBtn"><property name="text"><string>Delete Product</string></property></widget></item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QTableWidget" name="a_productTable"/>
+       </item>
+      </layout>
+     </widget>
+
+     <widget class="QWidget" name="ordersPage">
+      <layout class="QVBoxLayout" name="orderLayout">
+       <item>
+        <widget class="QPushButton" name="a_updateOrderBtn">
+         <property name="text"><string>Update Order Status</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTableWidget" name="a_orderTable"/>
+       </item>
+      </layout>
+     </widget>
+
+     <widget class="QWidget" name="sellersPage">
+      <layout class="QVBoxLayout" name="sellerLayout">
+       <item>
+        <widget class="QPushButton" name="a_verifySellerBtn">
+         <property name="text"><string>Verify Seller</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTableWidget" name="a_sellerTable"/>
+       </item>
+      </layout>
+     </widget>
+
+     <widget class="QWidget" name="customersPage">
+      <layout class="QVBoxLayout" name="custLayout">
+       <item>
+        <widget class="QPushButton" name="a_toggleUserBtn">
+         <property name="text"><string>Toggle User Status</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTableWidget" name="a_customerTable"/>
+       </item>
+      </layout>
+     </widget>
+
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ShellWidget</class>
+   <extends>QWidget</extends>
+   <header>shellwidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

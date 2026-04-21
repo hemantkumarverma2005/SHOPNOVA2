@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SellerDashboard</class>
+ <widget class="QWidget" name="SellerDashboard">
+  <layout class="QVBoxLayout" name="mainLayout">
+   <property name="spacing"><number>0</number></property>
+   <property name="leftMargin"><number>0</number></property>
+   <property name="topMargin"><number>0</number></property>
+   <property name="rightMargin"><number>0</number></property>
+   <property name="bottomMargin"><number>0</number></property>
+   <item>
+    <widget class="ShellWidget" name="shell" native="true"/>
+   </item>
+  </layout>
+  <widget class="QStackedWidget" name="pageSource" native="true">
+   <property name="visible"><bool>false</bool></property>
+   <widget class="QWidget" name="overviewPage">
+    <layout class="QVBoxLayout" name="overviewLayout">
+     <property name="leftMargin"><number>32</number></property>
+     <property name="topMargin"><number>32</number></property>
+     <property name="rightMargin"><number>32</number></property>
+     <property name="bottomMargin"><number>32</number></property>
+     <property name="spacing"><number>20</number></property>
+     <item>
+      <widget class="QLabel" name="o_title">
+       <property name="text"><string>📊  Store Overview</string></property>
+       <property name="styleSheet"><string>font-size: 24px; font-weight: 800; color: #f0f0f5;</string></property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="o_statsRow">
+       <property name="spacing"><number>16</number></property>
+       <item><widget class="QFrame" name="statCard0"/></item>
+       <item><widget class="QFrame" name="statCard1"/></item>
+       <item><widget class="QFrame" name="statCard2"/></item>
+       <item><widget class="QFrame" name="statCard3"/></item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="o_actionRow">
+       <property name="spacing"><number>14</number></property>
+      </layout>
+     </item>
+     <item>
+      <spacer><property name="orientation"><enum>Qt::Vertical</enum></property></spacer>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QWidget" name="productsPage">
+    <layout class="QVBoxLayout" name="productsLayout">
+     <property name="leftMargin"><number>32</number></property>
+     <property name="topMargin"><number>32</number></property>
+     <property name="rightMargin"><number>32</number></property>
+     <property name="bottomMargin"><number>32</number></property>
+     <item>
+      <widget class="QLabel" name="p_h">
+       <property name="text"><string>📦  My Products</string></property>
+       <property name="styleSheet"><string>font-size: 24px; font-weight: 800; color: #e0e0f0;</string></property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="p_btns">
+       <item><widget class="QPushButton" name="p_addBtn"><property name="text"><string>➕ Add Product</string></property><property name="objectName"><string>successBtn</string></property></widget></item>
+       <item><widget class="QPushButton" name="p_discountBtn"><property name="text"><string>🏷 Set Discount</string></property><property name="objectName"><string>warnBtn</string></property></widget></item>
+       <item><widget class="QPushButton" name="p_stockBtn"><property name="text"><string>📦 Update Stock</string></property><property name="objectName"><string>primaryBtn</string></property></widget></item>
+       <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property></spacer></item>
+      </layout>
+     </item>
+     <item>
+      <widget class="QTableWidget" name="productTable">
+       <property name="minimumSize"><size><width>0</width><height>400</height></size></property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QWidget" name="ordersPage">
+    <layout class="QVBoxLayout" name="ordersLayout">
+     <property name="leftMargin"><number>32</number></property>
+     <property name="topMargin"><number>32</number></property>
+     <property name="rightMargin"><number>32</number></property>
+     <property name="bottomMargin"><number>32</number></property>
+     <item>
+      <widget class="QLabel" name="or_h">
+       <property name="text"><string>📋  My Orders</string></property>
+       <property name="styleSheet"><string>font-size: 24px; font-weight: 800; color: #e0e0f0;</string></property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="or_btns">
+       <item><widget class="QPushButton" name="or_updateBtn"><property name="text"><string>✏️ Update Status</string></property><property name="objectName"><string>primaryBtn</string></property></widget></item>
+       <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property></spacer></item>
+      </layout>
+     </item>
+     <item>
+      <widget class="QTableWidget" name="orderTable">
+       <property name="minimumSize"><size><width>0</width><height>400</height></size></property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QWidget" name="profilePage">
+    <layout class="QVBoxLayout" name="profileLayout">
+     <property name="leftMargin"><number>32</number></property>
+     <property name="topMargin"><number>32</number></property>
+     <property name="rightMargin"><number>32</number></property>
+     <property name="bottomMargin"><number>32</number></property>
+     <item>
+      <widget class="QLabel" name="pr_h">
+       <property name="text"><string>👤  Seller Profile</string></property>
+       <property name="styleSheet"><string>font-size: 24px; font-weight: 800; color: #e0e0f0;</string></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="profileLbl">
+       <property name="styleSheet"><string>font-size: 14px; color: #f0f0f5; padding: 24px; background-color: #1a1a2e; border: 1px solid #252540; border-radius: 16px; line-height: 1.8;</string></property>
+       <property name="textFormat"><enum>Qt::RichText</enum></property>
+       <property name="alignment"><set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set></property>
+       <property name="wordWrap"><bool>true</bool></property>
+      </widget>
+     </item>
+     <item>
+      <spacer><property name="orientation"><enum>Qt::Vertical</enum></property></spacer>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ShellWidget</class>
+   <extends>QWidget</extends>
+   <header>shellwidget.h</header>
+  </customwidget>
+ </customwidgets>
+</ui>

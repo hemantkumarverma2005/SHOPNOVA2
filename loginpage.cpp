@@ -75,7 +75,7 @@ void LoginPage::buildUI() {
         "Manage shops, browse products, track orders —\n"
         "all in one unified platform built with Qt.");
     desc->setStyleSheet(
-        "font-size: 14px; color: #5a5a70; line-height: 1.6;"
+        "font-size: 14px; color: #7878a0; line-height: 1.6;"
         "background: transparent; border: none;");
     desc->setWordWrap(true);
     leftLay->addWidget(desc);
@@ -99,7 +99,7 @@ void LoginPage::buildUI() {
 
         QLabel* txtLbl = new QLabel(text);
         txtLbl->setStyleSheet(
-            "font-size: 13px; font-weight: 500; color: #9494a8;"
+            "font-size: 13px; font-weight: 500; color: #b0b0c8;"
             "background: transparent; border: none;");
 
         pl->addWidget(icLbl);
@@ -128,8 +128,8 @@ void LoginPage::buildUI() {
     // ═══════════════════════════════════════════════════════════════
     QFrame* rightPanel = new QFrame;
     rightPanel->setStyleSheet(
-        "QFrame { background: #0a0a0f; border: none;"
-        "border-left: 1px solid rgba(255,255,255,0.04); }");
+        "QFrame { background: #0c0c14; border: none;"
+        "border-left: 1px solid #1e1e30; }");
 
     QVBoxLayout* rightLay = new QVBoxLayout(rightPanel);
     rightLay->setContentsMargins(0, 0, 0, 0);
@@ -140,8 +140,8 @@ void LoginPage::buildUI() {
     QFrame* card = new QFrame;
     card->setFixedWidth(420);
     card->setStyleSheet(
-        "QFrame { background: #111118;"
-        "border: 1px solid rgba(255,255,255,0.07);"
+        "QFrame { background: #141420;"
+        "border: 1px solid #1e1e30;"
         "border-radius: 20px; }");
 
     // Glow shadow effect
@@ -186,7 +186,7 @@ void LoginPage::buildUI() {
     QLabel* loginSub = new QLabel("Sign in to access your dashboard");
     loginSub->setAlignment(Qt::AlignCenter);
     loginSub->setStyleSheet(
-        "font-size: 13px; color: #5a5a70; margin-bottom: 8px;"
+        "font-size: 13px; color: #7878a0; margin-bottom: 8px;"
         "background: transparent; border: none;");
 
     QLabel* emailLabel = new QLabel("Email");
@@ -232,9 +232,9 @@ void LoginPage::buildUI() {
 
     auto makeHintRow = [](const QString& role, const QString& email, const QString& pwd) -> QLabel* {
         QLabel* lbl = new QLabel(
-            QString("<span style='color:#5a5a70;'>%1:</span> "
-                    "<span style='color:#7070a0;'>%2</span> / "
-                    "<span style='color:#7070a0;'>%3</span>")
+            QString("<span style='color:#7878a0;'>%1:</span> "
+                    "<span style='color:#a0a0b8;'>%2</span> / "
+                    "<span style='color:#a0a0b8;'>%3</span>")
                 .arg(role, email, pwd));
         lbl->setStyleSheet("font-size: 11px; background: transparent; border: none;");
         return lbl;
@@ -278,7 +278,7 @@ void LoginPage::buildUI() {
     QLabel* regSub = new QLabel("Join ShopNova and start shopping");
     regSub->setAlignment(Qt::AlignCenter);
     regSub->setStyleSheet(
-        "font-size: 13px; color: #5a5a70; margin-bottom: 4px;"
+        "font-size: 13px; color: #7878a0; margin-bottom: 4px;"
         "background: transparent; border: none;");
 
     m_regName     = new QLineEdit; m_regName->setPlaceholderText("Full name");     m_regName->setMinimumHeight(44);
@@ -334,7 +334,7 @@ void LoginPage::buildUI() {
     QLabel* selSub = new QLabel("Start selling on ShopNova today");
     selSub->setAlignment(Qt::AlignCenter);
     selSub->setStyleSheet(
-        "font-size: 13px; color: #5a5a70; margin-bottom: 4px;"
+        "font-size: 13px; color: #7878a0; margin-bottom: 4px;"
         "background: transparent; border: none;");
 
     m_selName      = new QLineEdit; m_selName->setPlaceholderText("Your full name"); m_selName->setMinimumHeight(44);

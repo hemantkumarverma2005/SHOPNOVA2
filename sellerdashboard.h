@@ -6,10 +6,16 @@
 #include "shellwidget.h"
 #include "datastore.h"
 
+namespace Ui {
+class SellerDashboard;
+}
+
 class SellerDashboard : public QWidget {
     Q_OBJECT
 public:
     explicit SellerDashboard(Seller* seller, Platform* platform, QWidget* parent = nullptr);
+    ~SellerDashboard();
+    
     void refresh();
 
 signals:
@@ -26,16 +32,7 @@ private:
     void refreshOrders();
     void refreshStats();
 
-    QWidget *buildOverviewPage();
-    QWidget *buildProductsPage();
-    QWidget *buildOrdersPage();
-    QWidget *buildProfilePage();
-
+    Ui::SellerDashboard* ui;
     Seller*   m_seller;
     Platform* m_platform;
-    ShellWidget *m_shell;
-
-    QFrame*       m_statCards[4];
-    QTableWidget* m_productTable;
-    QTableWidget* m_orderTable;
 };

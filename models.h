@@ -4,6 +4,7 @@
 #include <QMap>
 #include <QDateTime>
 #include <memory>
+#include <algorithm>
 
 // ============================================================
 //  ENUMS
@@ -51,6 +52,7 @@ protected:
     int     m_sellerId;
     QString m_sellerName;
     bool    m_isActive;
+    QString m_imagePath;
     QVector<Review> m_reviews;
 
 public:
@@ -75,6 +77,7 @@ public:
     int     getSellerId()    const { return m_sellerId; }
     QString getSellerName()  const { return m_sellerName; }
     bool    getIsActive()    const { return m_isActive; }
+    QString getImagePath()   const { return m_imagePath; }
 
     double getDiscountedPrice() const {
         return m_price * (1.0 - m_discountPercent / 100.0);
@@ -96,6 +99,7 @@ public:
     void setSellerId(int id)     { m_sellerId = id; }
     void setSellerName(const QString& n)  { m_sellerName = n; }
     void setId(int id)           { m_id = id; }
+    void setImagePath(const QString& p) { m_imagePath = p; }
 
     bool reduceStock(int qty) {
         if (m_stock < qty) return false;

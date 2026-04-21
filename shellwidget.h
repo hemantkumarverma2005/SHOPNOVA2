@@ -7,6 +7,11 @@
 #include <QStackedWidget>
 #include <QFrame>
 #include <QVector>
+#include <QString>
+
+namespace Ui {
+class ShellWidget;
+}
 
 struct NavItem {
     QString icon;
@@ -18,6 +23,7 @@ class ShellWidget : public QWidget {
     Q_OBJECT
 public:
     explicit ShellWidget(QWidget *parent = nullptr);
+    ~ShellWidget();
 
     // Call before showing — sets up sidebar + content
     void configure(const QString &appTitle,
@@ -26,19 +32,17 @@ public:
                    const QVector<NavItem> &navItems);
 
     void setHeaderRight(QWidget *w);  // optional top-right area
+    void setSearchVisible(bool visible);  // hide search bar for admin/seller
 
 signals:
     void logoutRequested();
 
+private slots:
+    void onLogoutClicked();
+
 private:
-    QFrame        *m_sidebar;
-    QWidget       *m_header;
-    QStackedWidget *m_contentStack;
-    QVBoxLayout   *m_navLayout;
-    QLabel        *m_userNameLbl;
-    QLabel        *m_roleLbl;
+    Ui::ShellWidget *ui;
     QVector<QPushButton*> m_navBtns;
 
-    void buildSkeleton();
     void selectNav(int index);
 };

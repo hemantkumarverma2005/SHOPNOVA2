@@ -7,18 +7,25 @@
 #include <QComboBox>
 #include "shellwidget.h"
 #include "datastore.h"
+#include "flowlayout.h"
+
+namespace Ui {
+class CustomerDashboard;
+}
 
 class CustomerDashboard : public QWidget {
     Q_OBJECT
 public:
     explicit CustomerDashboard(Customer* customer, Platform* platform, QWidget* parent = nullptr);
+    ~CustomerDashboard();
     void refresh();
 
 signals:
     void logoutRequested();
 
 private slots:
-    void onAddToCart();
+    void onAddToCartCard(int productId);
+    void onProductCardClicked(int productId);
     void onRemoveFromCart();
     void onCheckout();
     void onCancelOrder();
@@ -31,22 +38,7 @@ private:
     void refreshOrders();
     void refreshProfile();
 
-    QWidget *buildHomePage();
-    QWidget *buildShopPage();
-    QWidget *buildCartPage();
-    QWidget *buildOrdersPage();
-    QWidget *buildProfilePage();
-
+    Ui::CustomerDashboard* ui;
     Customer* m_customer;
     Platform* m_platform;
-    ShellWidget *m_shell;
-
-    QFrame*       m_statCards[4];
-    QTableWidget* m_productTable;
-    QTableWidget* m_cartTable;
-    QTableWidget* m_orderTable;
-    QLabel*       m_cartTotalLabel;
-    QLabel*       m_profileLabel;
-    QLabel*       m_notifLabel;
-    QLineEdit*    m_searchEdit;
 };

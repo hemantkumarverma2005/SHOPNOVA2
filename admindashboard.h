@@ -7,10 +7,15 @@
 #include "shellwidget.h"
 #include "datastore.h"
 
+namespace Ui {
+class AdminDashboard;
+}
+
 class AdminDashboard : public QWidget {
     Q_OBJECT
 public:
     explicit AdminDashboard(Admin* admin, Platform* platform, QWidget* parent = nullptr);
+    ~AdminDashboard();
     void refresh();
 
 signals:
@@ -19,6 +24,7 @@ signals:
 private slots:
     void onAddProduct();
     void onToggleProduct();
+    void onDeleteProduct();
     void onVerifySeller();
     void onUpdateOrderStatus();
     void onToggleUser();
@@ -30,19 +36,7 @@ private:
     void refreshSellers();
     void refreshCustomers();
 
-    QWidget *buildDashboardPage();
-    QWidget *buildProductsPage();
-    QWidget *buildOrdersPage();
-    QWidget *buildSellersPage();
-    QWidget *buildCustomersPage();
-
+    Ui::AdminDashboard* ui;
     Admin*    m_admin;
     Platform* m_platform;
-    ShellWidget *m_shell;
-
-    QFrame*       m_statCards[5];
-    QTableWidget* m_productTable;
-    QTableWidget* m_orderTable;
-    QTableWidget* m_sellerTable;
-    QTableWidget* m_customerTable;
 };

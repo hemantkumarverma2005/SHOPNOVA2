@@ -19,6 +19,10 @@ set(PROJECT_SOURCES
         mainwindow.cpp
         mainwindow.h
         mainwindow.ui
+        shellwidget.ui
+        sellerdashboard.ui
+        admindashboard.ui
+        customerdashboard.ui
         ${TS_FILES}
 )
 
@@ -39,6 +43,12 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         models.h
         shellwidget.h
         shellwidget.cpp
+        flowlayout.h
+        flowlayout.cpp
+        productcard.h
+        productcard.cpp
+        productdetaildialog.h
+        productdetaildialog.cpp
         resources.qrc
     )
 # Define target properties for Android with Qt 6 as:
@@ -63,6 +73,7 @@ else()
     qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
 endif()
 
+target_include_directories(SHOPNOVA2 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(SHOPNOVA2 PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

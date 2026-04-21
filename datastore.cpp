@@ -198,6 +198,17 @@ void Platform::toggleProductStatus(int productId) {
     if (p) { p->setActive(!p->getIsActive()); saveToDisk(); }
 }
 
+void Platform::deleteProduct(int productId) {
+    auto it = std::remove_if(m_products.begin(), m_products.end(),
+                             [productId](const std::unique_ptr<Product>& p) {
+                                 return p->getId() == productId;
+                             });
+    if (it != m_products.end()) {
+        m_products.erase(it, m_products.end());
+        saveToDisk();
+    }
+}
+
 // ── ORDERS ───────────────────────────────────────────────────
 Order* Platform::placeOrder(Customer* customer, const Address& address, PaymentMethod method) {
     if (customer->getCart().isEmpty())
@@ -307,7 +318,10 @@ Coupon* Platform::getCoupon(const QString& code) {
 }
 
 // ── PERSISTENCE ───────────────────────────────────────────────
-void DataStore::ensureDir() { QDir().mkpath("data"); }
+void DataStore::ensureDir() { 
+    QDir().mkpath("data"); 
+    QDir().mkpath("data/images");
+}
 
 void Platform::saveToDisk() { DataStore::save(this); }
 
@@ -333,7 +347,8 @@ void DataStore::save(Platform* p) {
                     << prod->getStock()    << "\t"
                     << prod->getSellerId() << "\t"
                     << prod->getSellerName() << "\t"
-                    << (prod->getIsActive() ? "1" : "0") << "\n";
+                    << (prod->getIsActive() ? "1" : "0") << "\t"
+                    << prod->getImagePath() << "\n";
             }
         }
     }
@@ -521,6 +536,9 @@ void DataStore::load(Platform* p) {
 
                     prod->setDiscount(disc);
                     prod->setActive(active);
+                    if (parts.size() >= 13) {
+                        prod->setImagePath(parts[12]);
+                    }
                     p->m_products.push_back(std::move(prod));
                     if (id >= p->m_nextProductId) p->m_nextProductId = id + 1;
                 }

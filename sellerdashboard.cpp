@@ -1,4 +1,5 @@
 #include "sellerdashboard.h"
+#include "ui_sellerdashboard.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
@@ -12,33 +13,38 @@
 #include <QPushButton>
 #include <QLineEdit>
 #include <QScrollArea>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QFile>
+#include <QColor>
+#include <QLayoutItem>
 
 // ── Helper: create a stat card widget ─────────────────────────
-static QFrame* makeStatCard(const QString& icon, const QString& value,
-                            const QString& label, const QString& accent)
+static QFrame* makeStatCard(const QString& label, const QString& value,
+                            const QString& subtitle, const QString& valueColor)
 {
     QFrame* card = new QFrame;
-    card->setMinimumHeight(120);
+    card->setMinimumHeight(130);
     card->setStyleSheet(QString(
-        "QFrame { background: #14142a; border: 1px solid #1e1e3a;"
-        "border-radius: 16px; }"));
+        "QFrame { background: #1a1a2e; border: 1px solid #252540;"
+        "border-radius: 12px; }"));
     QVBoxLayout* cl = new QVBoxLayout(card);
-    cl->setContentsMargins(20, 18, 20, 18);
+    cl->setContentsMargins(20, 20, 20, 20);
     cl->setSpacing(8);
 
-    QLabel* ic = new QLabel(icon);
-    ic->setFixedSize(40, 40);
-    ic->setAlignment(Qt::AlignCenter);
-    ic->setStyleSheet(QString("background: %1; border-radius: 12px; font-size: 20px;").arg(accent));
     QLabel* ttl = new QLabel(label);
-    ttl->setStyleSheet("font-size: 12px; color: #5a5a80; font-weight: 600;");
+    ttl->setStyleSheet("font-size: 13px; color: #8888a8; font-weight: 500; border: none; background: transparent;");
     QLabel* val = new QLabel(value);
     val->setObjectName("cardValue");
-    val->setStyleSheet("font-size: 28px; font-weight: 800; color: #e0e0f0;");
+    val->setStyleSheet(QString("font-size: 28px; font-weight: 800; color: %1; border: none; background: transparent;").arg(valueColor));
+    QLabel* sub = new QLabel(subtitle);
+    sub->setObjectName("cardSubtitle");
+    sub->setStyleSheet("font-size: 11px; color: #7878a0; border: none; background: transparent;");
 
-    cl->addWidget(ic);
     cl->addWidget(ttl);
+    cl->addStretch();
     cl->addWidget(val);
+    cl->addWidget(sub);
     return card;
 }
 
@@ -69,197 +75,77 @@ static QWidget* makeOrderStatusPill(OrderStatus status, const QString& text) {
     return makeStatusPill(text, objName);
 }
 
+// ── Helper: quick-action tile ─────────────────────────────────
+static QPushButton* makeActionTile(const QString& icon, const QString& label) {
+    QPushButton* btn = new QPushButton(icon + "\n" + label);
+    btn->setObjectName("actionCard");
+    btn->setMinimumSize(140, 90);
+    btn->setCursor(Qt::PointingHandCursor);
+    return btn;
+}
+
 SellerDashboard::SellerDashboard(Seller* seller, Platform* platform, QWidget* parent)
-    : QWidget(parent), m_seller(seller), m_platform(platform)
+    : QWidget(parent), ui(new Ui::SellerDashboard), m_seller(seller), m_platform(platform)
 {
-    QVBoxLayout *root = new QVBoxLayout(this);
-    root->setContentsMargins(0,0,0,0);
-    root->setSpacing(0);
+    ui->setupUi(this);
 
-    m_shell = new ShellWidget(this);
-    root->addWidget(m_shell);
+    connect(ui->shell, &ShellWidget::logoutRequested, this, &SellerDashboard::logoutRequested);
+    ui->shell->setSearchVisible(false);  // Hide search in seller
 
-    connect(m_shell, &ShellWidget::logoutRequested,
-            this, &SellerDashboard::logoutRequested);
+    // Wire up buttons
+    connect(ui->p_addBtn, &QPushButton::clicked, this, &SellerDashboard::onAddProduct);
+    connect(ui->p_discountBtn, &QPushButton::clicked, this, &SellerDashboard::onSetDiscount);
+    connect(ui->p_stockBtn, &QPushButton::clicked, this, &SellerDashboard::onUpdateStock);
+    connect(ui->or_updateBtn, &QPushButton::clicked, this, &SellerDashboard::onUpdateOrderStatus);
 
-    QVector<NavItem> nav = {
-        {"",                         "Store",        nullptr},
-        {QString::fromUtf8("🏠"),    "Overview",     buildOverviewPage()},
-        {QString::fromUtf8("📦"),    "My Products",  buildProductsPage()},
-        {"",                         "Management",   nullptr},
-        {QString::fromUtf8("📋"),    "Orders",       buildOrdersPage()},
-        {QString::fromUtf8("👤"),    "Profile",      buildProfilePage()},
-    };
+    // Setup headers for tables
+    ui->productTable->setColumnCount(6);
+    ui->productTable->setHorizontalHeaderLabels({"ID", "Name", "Brand", QString::fromUtf8("Price (₹)"), "Disc%", "Stock"});
+    ui->productTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    ui->productTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->productTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    ui->productTable->setAlternatingRowColors(true);
+    ui->productTable->verticalHeader()->setVisible(false);
+    ui->productTable->setShowGrid(false);
 
-    m_shell->configure("ShopNova", m_seller->getName(), "Seller", nav);
-}
+    ui->orderTable->setColumnCount(5);
+    ui->orderTable->setHorizontalHeaderLabels({"Order#", "Customer", "Product", QString::fromUtf8("Amount (₹)"), "Status"});
+    ui->orderTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    ui->orderTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->orderTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    ui->orderTable->setAlternatingRowColors(true);
+    ui->orderTable->verticalHeader()->setVisible(false);
+    ui->orderTable->setShowGrid(false);
 
-// ─── Page builders ───────────────────────────────────────────────────────────
-
-QWidget *SellerDashboard::buildOverviewPage() {
-    QScrollArea *scroll = new QScrollArea;
-    scroll->setFrameShape(QFrame::NoFrame);
-    scroll->setWidgetResizable(true);
-
-    QWidget *page = new QWidget;
-    QVBoxLayout *lay = new QVBoxLayout(page);
-    lay->setContentsMargins(32, 32, 32, 32);
-    lay->setSpacing(24);
-
-    // Header with store name and badge
-    QHBoxLayout *headerRow = new QHBoxLayout;
-    QLabel *title = new QLabel(QString::fromUtf8("🏪  ") + m_seller->getStoreName());
-    title->setStyleSheet("font-size: 26px; font-weight: 800; color: #e0e0f0;");
-    headerRow->addWidget(title);
-    headerRow->addSpacing(12);
-
-    QLabel* badge;
-    if (m_seller->getIsVerified()) {
-        badge = new QLabel(QString::fromUtf8("  ✓ VERIFIED  "));
-        badge->setObjectName("verifiedBadge");
-    } else {
-        badge = new QLabel(QString::fromUtf8("  ⏳ PENDING  "));
-        badge->setObjectName("pendingBadge");
+    // Refill stat cards layout
+    QLayoutItem *child;
+    while((child = ui->o_statsRow->takeAt(0)) != nullptr) {
+        delete child->widget();
+        delete child;
     }
-    headerRow->addWidget(badge);
-    headerRow->addStretch();
-    lay->addLayout(headerRow);
+    ui->o_statsRow->addWidget(makeStatCard("Total Revenue", QString::fromUtf8("₹0"), "+20.1% from last month", "#ff6b2b"));
+    ui->o_statsRow->addWidget(makeStatCard("Total Orders", "+0", "+15% from last month", "#4cc9f0"));
+    ui->o_statsRow->addWidget(makeStatCard("Active Products", "0", "In your store", "#06d6a0"));
+    ui->o_statsRow->addWidget(makeStatCard("Pending Orders", "0", "Need processing", "#ffd166"));
 
-    // Stat cards row
-    QHBoxLayout *statsRow = new QHBoxLayout;
-    statsRow->setSpacing(16);
+    // Add quick-action tiles to overview
+    QPushButton* tileAdd    = makeActionTile(QString::fromUtf8("➕"), "Add Product");
+    QPushButton* tileDisc   = makeActionTile(QString::fromUtf8("🏷️"), "Set Discount");
+    QPushButton* tileStock  = makeActionTile(QString::fromUtf8("📦"), "Update Stock");
+    QPushButton* tileOrders = makeActionTile(QString::fromUtf8("📋"), "View Orders");
 
-    m_statCards[0] = makeStatCard(QString::fromUtf8("🏪"), m_seller->getStoreName(), "Store Name",  "rgba(255,107,43,0.15)");
-    m_statCards[1] = makeStatCard(QString::fromUtf8("📦"), "0", "Products",  "rgba(76,201,240,0.15)");
-    m_statCards[2] = makeStatCard(QString::fromUtf8("💰"), QString::fromUtf8("₹0"), "Revenue",  "rgba(6,214,160,0.15)");
-    m_statCards[3] = makeStatCard(QString::fromUtf8("⭐"), "0.0", "Rating",   "rgba(255,209,102,0.15)");
+    ui->o_actionRow->addWidget(tileAdd);
+    ui->o_actionRow->addWidget(tileDisc);
+    ui->o_actionRow->addWidget(tileStock);
+    ui->o_actionRow->addWidget(tileOrders);
+    ui->o_actionRow->addStretch();
 
-    for (int i = 0; i < 4; ++i)
-        statsRow->addWidget(m_statCards[i]);
-    lay->addLayout(statsRow);
+    connect(tileAdd, &QPushButton::clicked, this, &SellerDashboard::onAddProduct);
+    connect(tileDisc, &QPushButton::clicked, this, &SellerDashboard::onSetDiscount);
+    connect(tileStock, &QPushButton::clicked, this, &SellerDashboard::onUpdateStock);
 
-    QLabel *hint = new QLabel("Manage your products and orders from the sidebar navigation.");
-    hint->setStyleSheet("font-size: 13px; color: #5a5a70;");
-    hint->setWordWrap(true);
-    lay->addWidget(hint);
-
-    lay->addStretch();
-    scroll->setWidget(page);
-    return scroll;
-}
-
-QWidget *SellerDashboard::buildProductsPage() {
-    QScrollArea *scroll = new QScrollArea;
-    scroll->setFrameShape(QFrame::NoFrame);
-    scroll->setWidgetResizable(true);
-
-    QWidget *page = new QWidget;
-    QVBoxLayout *lay = new QVBoxLayout(page);
-    lay->setContentsMargins(32, 32, 32, 32);
-    lay->setSpacing(20);
-
-    QLabel *h = new QLabel(QString::fromUtf8("📦  My Products"));
-    h->setStyleSheet("font-size: 24px; font-weight: 800; color: #e0e0f0;");
-    lay->addWidget(h);
-
-    QHBoxLayout* btns = new QHBoxLayout;
-    QPushButton* addBtn      = new QPushButton(QString::fromUtf8("➕ Add Product"));
-    addBtn->setObjectName("successBtn");
-    QPushButton* discountBtn = new QPushButton(QString::fromUtf8("🏷 Set Discount"));
-    discountBtn->setObjectName("warnBtn");
-    QPushButton* stockBtn    = new QPushButton(QString::fromUtf8("📦 Update Stock"));
-    stockBtn->setObjectName("primaryBtn");
-    addBtn->setMinimumHeight(36);
-    discountBtn->setMinimumHeight(36);
-    stockBtn->setMinimumHeight(36);
-
-    connect(addBtn,      &QPushButton::clicked, this, &SellerDashboard::onAddProduct);
-    connect(discountBtn, &QPushButton::clicked, this, &SellerDashboard::onSetDiscount);
-    connect(stockBtn,    &QPushButton::clicked, this, &SellerDashboard::onUpdateStock);
-
-    btns->addWidget(addBtn);
-    btns->addWidget(discountBtn);
-    btns->addWidget(stockBtn);
-    btns->addStretch();
-    lay->addLayout(btns);
-
-    m_productTable = new QTableWidget(0, 6);
-    m_productTable->setHorizontalHeaderLabels({"ID", "Name", "Brand", QString::fromUtf8("Price (₹)"), "Disc%", "Stock"});
-    m_productTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-    m_productTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    m_productTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    m_productTable->setAlternatingRowColors(true);
-    m_productTable->verticalHeader()->setVisible(false);
-    m_productTable->setShowGrid(false);
-    m_productTable->setMinimumHeight(400);
-    lay->addWidget(m_productTable);
-
-    lay->addStretch();
-    scroll->setWidget(page);
-    return scroll;
-}
-
-QWidget *SellerDashboard::buildOrdersPage() {
-    QScrollArea *scroll = new QScrollArea;
-    scroll->setFrameShape(QFrame::NoFrame);
-    scroll->setWidgetResizable(true);
-
-    QWidget *page = new QWidget;
-    QVBoxLayout *lay = new QVBoxLayout(page);
-    lay->setContentsMargins(32, 32, 32, 32);
-    lay->setSpacing(20);
-
-    QLabel *h = new QLabel(QString::fromUtf8("📋  My Orders"));
-    h->setStyleSheet("font-size: 24px; font-weight: 800; color: #e0e0f0;");
-    lay->addWidget(h);
-
-    QHBoxLayout* btns = new QHBoxLayout;
-    QPushButton* updateBtn = new QPushButton(QString::fromUtf8("✏️ Update Status"));
-    updateBtn->setObjectName("primaryBtn");
-    updateBtn->setMinimumHeight(36);
-    connect(updateBtn, &QPushButton::clicked, this, &SellerDashboard::onUpdateOrderStatus);
-    btns->addWidget(updateBtn);
-    btns->addStretch();
-    lay->addLayout(btns);
-
-    m_orderTable = new QTableWidget(0, 5);
-    m_orderTable->setHorizontalHeaderLabels({"Order#", "Customer", "Product", QString::fromUtf8("Amount (₹)"), "Status"});
-    m_orderTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-    m_orderTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    m_orderTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    m_orderTable->setAlternatingRowColors(true);
-    m_orderTable->verticalHeader()->setVisible(false);
-    m_orderTable->setShowGrid(false);
-    m_orderTable->setMinimumHeight(400);
-    lay->addWidget(m_orderTable);
-
-    lay->addStretch();
-    scroll->setWidget(page);
-    return scroll;
-}
-
-QWidget *SellerDashboard::buildProfilePage() {
-    QScrollArea *scroll = new QScrollArea;
-    scroll->setFrameShape(QFrame::NoFrame);
-    scroll->setWidgetResizable(true);
-
-    QWidget *page = new QWidget;
-    QVBoxLayout *lay = new QVBoxLayout(page);
-    lay->setContentsMargins(32, 32, 32, 32);
-    lay->setSpacing(16);
-
-    QLabel *h = new QLabel(QString::fromUtf8("👤  Seller Profile"));
-    h->setStyleSheet("font-size: 24px; font-weight: 800; color: #e0e0f0;");
-    lay->addWidget(h);
-
-    QLabel *profile = new QLabel;
-    profile->setAlignment(Qt::AlignTop | Qt::AlignLeft);
-    profile->setWordWrap(true);
-    profile->setStyleSheet(
-        "font-size: 14px; color: #f0f0f5; padding: 24px;"
-        "background-color: #111118; border: 1px solid rgba(255,255,255,0.07);"
-        "border-radius: 16px; line-height: 1.8;");
-    profile->setText(
+    // Profile page text
+    ui->profileLbl->setText(
         QString("<div style='line-height: 2.2;'>"
                 "<span style='font-size: 22px; font-weight: 800; color: #f0f0f5;'>🏪  %1</span>"
                 "<br>"
@@ -284,12 +170,29 @@ QWidget *SellerDashboard::buildProfilePage() {
         .arg(m_seller->getPhone())
         .arg((int)m_seller->getTotalRevenue())
         .arg(m_seller->getRating(), 0, 'f', 1)
-        .arg(m_seller->getProductIds().size()));
-    lay->addWidget(profile);
+        .arg(m_seller->getProductIds().size())
+    );
 
-    lay->addStretch();
-    scroll->setWidget(page);
-    return scroll;
+    // Extract pages out to wrapper scroll areas
+    QScrollArea *o_scroll = new QScrollArea; o_scroll->setWidgetResizable(true); o_scroll->setWidget(ui->overviewPage); o_scroll->setFrameShape(QFrame::NoFrame);
+    QScrollArea *p_scroll = new QScrollArea; p_scroll->setWidgetResizable(true); p_scroll->setWidget(ui->productsPage); p_scroll->setFrameShape(QFrame::NoFrame);
+    QScrollArea *or_scroll = new QScrollArea; or_scroll->setWidgetResizable(true); or_scroll->setWidget(ui->ordersPage); or_scroll->setFrameShape(QFrame::NoFrame);
+    QScrollArea *pr_scroll = new QScrollArea; pr_scroll->setWidgetResizable(true); pr_scroll->setWidget(ui->profilePage); pr_scroll->setFrameShape(QFrame::NoFrame);
+    
+    QVector<NavItem> nav = {
+        {"",                         "Store",        nullptr},
+        {QString::fromUtf8("🏠"),    "Overview",     o_scroll},
+        {QString::fromUtf8("📦"),    "My Products",  p_scroll},
+        {"",                         "Management",   nullptr},
+        {QString::fromUtf8("📋"),    "Orders",       or_scroll},
+        {QString::fromUtf8("👤"),    "Profile",      pr_scroll},
+    };
+
+    ui->shell->configure("ShopNova", m_seller->getName(), "Seller", nav);
+}
+
+SellerDashboard::~SellerDashboard() {
+    delete ui;
 }
 
 // ─── Refresh logic ───────────────────────────────────────────────────────────
@@ -301,43 +204,60 @@ void SellerDashboard::refresh() {
 }
 
 void SellerDashboard::refreshStats() {
-    auto updateCard = [](QFrame* card, const QString& val) {
-        QLabel* valLbl = card->findChild<QLabel*>("cardValue");
+    auto updateCard = [](QLayoutItem* child, const QString& val) {
+        if (!child || !child->widget()) return;
+        QLabel* valLbl = child->widget()->findChild<QLabel*>("cardValue");
         if (valLbl) valLbl->setText(val);
     };
     auto prods = m_platform->getProductsBySeller(m_seller->getId());
-    updateCard(m_statCards[0], m_seller->getStoreName());
-    updateCard(m_statCards[1], QString::number(prods.size()));
-    updateCard(m_statCards[2], QString::fromUtf8("₹") + QString::number((int)m_seller->getTotalRevenue()));
-    updateCard(m_statCards[3], QString::number(m_seller->getRating(), 'f', 1));
+    
+    int totalOrders = 0;
+    int pendingOrders = 0;
+    QVector<int> myPids;
+    for (auto* p : prods) myPids.append(p->getId());
+
+    for (auto& o : m_platform->getAllOrders()) {
+        for (auto& item : o->getItems()) {
+            if (myPids.contains(item.productId)) {
+                totalOrders++;
+                if (o->getStatus() == OrderStatus::PENDING) pendingOrders++;
+                break; // count order only once for this seller
+            }
+        }
+    }
+    
+    updateCard(ui->o_statsRow->itemAt(0), QString::fromUtf8("₹") + QString::number((int)m_seller->getTotalRevenue()));
+    updateCard(ui->o_statsRow->itemAt(1), QString("+") + QString::number(totalOrders));
+    updateCard(ui->o_statsRow->itemAt(2), QString::number(prods.size()));
+    updateCard(ui->o_statsRow->itemAt(3), QString::number(pendingOrders));
 }
 
 void SellerDashboard::refreshProducts() {
-    m_productTable->setRowCount(0);
+    ui->productTable->setRowCount(0);
     for (auto* p : m_platform->getProductsBySeller(m_seller->getId())) {
-        int row = m_productTable->rowCount();
-        m_productTable->insertRow(row);
-        m_productTable->setItem(row, 0, new QTableWidgetItem(QString::number(p->getId())));
-        m_productTable->setItem(row, 1, new QTableWidgetItem(p->getName()));
-        m_productTable->setItem(row, 2, new QTableWidgetItem(p->getBrand()));
-        m_productTable->setItem(row, 3, new QTableWidgetItem(QString::fromUtf8("₹") + QString::number((int)p->getDiscountedPrice())));
+        int row = ui->productTable->rowCount();
+        ui->productTable->insertRow(row);
+        ui->productTable->setItem(row, 0, new QTableWidgetItem(QString::number(p->getId())));
+        ui->productTable->setItem(row, 1, new QTableWidgetItem(p->getName()));
+        ui->productTable->setItem(row, 2, new QTableWidgetItem(p->getBrand()));
+        ui->productTable->setItem(row, 3, new QTableWidgetItem(QString::fromUtf8("₹") + QString::number((int)p->getDiscountedPrice())));
 
         // Discount with color
         auto* discItem = new QTableWidgetItem(QString::number((int)p->getDiscount()) + "%");
         if (p->getDiscount() > 0) discItem->setForeground(QColor("#06d6a0"));
-        m_productTable->setItem(row, 4, discItem);
+        ui->productTable->setItem(row, 4, discItem);
 
         // Stock with color coding
         auto* sItem = new QTableWidgetItem(QString::number(p->getStock()));
         if (p->getStock() == 0) { sItem->setForeground(QColor("#ff4444")); sItem->setText("Out"); }
         else if (p->getStock() <= 5) { sItem->setForeground(QColor("#ffd166")); }
-        m_productTable->setItem(row, 5, sItem);
-        m_productTable->setRowHeight(row, 38);
+        ui->productTable->setItem(row, 5, sItem);
+        ui->productTable->setRowHeight(row, 38);
     }
 }
 
 void SellerDashboard::refreshOrders() {
-    m_orderTable->setRowCount(0);
+    ui->orderTable->setRowCount(0);
     auto myProds = m_platform->getProductsBySeller(m_seller->getId());
     QVector<int> myPids;
     for (auto* p : myProds) myPids.append(p->getId());
@@ -345,18 +265,18 @@ void SellerDashboard::refreshOrders() {
     for (auto& o : m_platform->getAllOrders()) {
         for (auto& item : o->getItems()) {
             if (myPids.contains(item.productId)) {
-                int row = m_orderTable->rowCount();
-                m_orderTable->insertRow(row);
-                m_orderTable->setItem(row, 0, new QTableWidgetItem("#" + QString::number(o->getId())));
-                m_orderTable->setItem(row, 1, new QTableWidgetItem(o->getCustomerName()));
-                m_orderTable->setItem(row, 2, new QTableWidgetItem(item.productName + " x" + QString::number(item.quantity)));
+                int row = ui->orderTable->rowCount();
+                ui->orderTable->insertRow(row);
+                ui->orderTable->setItem(row, 0, new QTableWidgetItem("#" + QString::number(o->getId())));
+                ui->orderTable->setItem(row, 1, new QTableWidgetItem(o->getCustomerName()));
+                ui->orderTable->setItem(row, 2, new QTableWidgetItem(item.productName + " x" + QString::number(item.quantity)));
                 auto* amtItem = new QTableWidgetItem(QString::fromUtf8("₹") + QString::number((int)o->getTotalAmount()));
                 amtItem->setForeground(QColor("#ff9a5c"));
-                m_orderTable->setItem(row, 3, amtItem);
+                ui->orderTable->setItem(row, 3, amtItem);
 
                 // Status pill
-                m_orderTable->setCellWidget(row, 4, makeOrderStatusPill(o->getStatus(), o->statusString()));
-                m_orderTable->setRowHeight(row, 40);
+                ui->orderTable->setCellWidget(row, 4, makeOrderStatusPill(o->getStatus(), o->statusString()));
+                ui->orderTable->setRowHeight(row, 40);
                 break;
             }
         }
@@ -380,6 +300,22 @@ void SellerDashboard::onAddProduct() {
     price->setMinimumHeight(36);
     QSpinBox* stock = new QSpinBox; stock->setRange(0, 999999);
     stock->setMinimumHeight(36);
+    
+    QHBoxLayout* imgLayout = new QHBoxLayout;
+    QPushButton* imgBtn = new QPushButton("Browse Image");
+    QLabel* imgPathLbl = new QLabel("No image selected");
+    imgLayout->addWidget(imgBtn);
+    imgLayout->addWidget(imgPathLbl);
+    
+    QString selectedImagePath;
+    connect(imgBtn, &QPushButton::clicked, [&]() {
+        QString path = QFileDialog::getOpenFileName(&dlg, "Select Product Image", "", "Images (*.png *.jpg *.jpeg *.webp)");
+        if (!path.isEmpty()) {
+            selectedImagePath = path;
+            imgPathLbl->setText(QFileInfo(path).fileName());
+        }
+    });
+
     QPushButton* ok = new QPushButton("Add Product"); ok->setObjectName("successBtn");
     ok->setMinimumHeight(40);
     connect(ok, &QPushButton::clicked, &dlg, &QDialog::accept);
@@ -389,6 +325,7 @@ void SellerDashboard::onAddProduct() {
     form->addRow("Brand:",   brandEdit);
     form->addRow("Price:",   price);
     form->addRow("Stock:",   stock);
+    form->addRow("Image:",   imgLayout);
     form->addRow(ok);
 
     if (dlg.exec() == QDialog::Accepted) {
@@ -397,7 +334,20 @@ void SellerDashboard::onAddProduct() {
         auto prod = std::make_unique<Electronics>(0, name, descEdit->text(),
             brandEdit->text(), price->value(), stock->value(),
             m_seller->getId(), m_seller->getStoreName(), 12);
+        
         int pid = m_platform->addProduct(std::move(prod));
+        
+        if (!selectedImagePath.isEmpty()) {
+            Product* newlyAdded = m_platform->getProductById(pid);
+            if (newlyAdded) {
+                QString destName = QString("data/images/prod_%1_%2").arg(pid).arg(QFileInfo(selectedImagePath).fileName());
+                if (QFile::copy(selectedImagePath, destName)) {
+                    newlyAdded->setImagePath(destName);
+                    m_platform->saveToDisk();
+                }
+            }
+        }
+        
         m_seller->addProductId(pid);
         refresh();
         QMessageBox::information(this, "Added", "Product added! ID: " + QString::number(pid));
@@ -405,9 +355,9 @@ void SellerDashboard::onAddProduct() {
 }
 
 void SellerDashboard::onSetDiscount() {
-    int row = m_productTable->currentRow();
+    int row = ui->productTable->currentRow();
     if (row < 0) { QMessageBox::information(this, "Info", "Select a product."); return; }
-    int pid = m_productTable->item(row, 0)->text().toInt();
+    int pid = ui->productTable->item(row, 0)->text().toInt();
     Product* p = m_platform->getProductById(pid);
     if (!p || p->getSellerId() != m_seller->getId()) return;
     bool ok;
@@ -417,9 +367,9 @@ void SellerDashboard::onSetDiscount() {
 }
 
 void SellerDashboard::onUpdateStock() {
-    int row = m_productTable->currentRow();
+    int row = ui->productTable->currentRow();
     if (row < 0) { QMessageBox::information(this, "Info", "Select a product."); return; }
-    int pid = m_productTable->item(row, 0)->text().toInt();
+    int pid = ui->productTable->item(row, 0)->text().toInt();
     Product* p = m_platform->getProductById(pid);
     if (!p || p->getSellerId() != m_seller->getId()) return;
     bool ok;
@@ -429,9 +379,9 @@ void SellerDashboard::onUpdateStock() {
 }
 
 void SellerDashboard::onUpdateOrderStatus() {
-    int row = m_orderTable->currentRow();
+    int row = ui->orderTable->currentRow();
     if (row < 0) { QMessageBox::information(this, "Info", "Select an order."); return; }
-    int oid = m_orderTable->item(row, 0)->text().remove('#').toInt();
+    int oid = ui->orderTable->item(row, 0)->text().remove('#').toInt();
     QStringList statuses = {"Confirmed", "Shipped", "Delivered"};
     bool ok;
     QString chosen = QInputDialog::getItem(this, "Update Status", "New status:", statuses, 0, false, &ok);

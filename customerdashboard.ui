@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>CustomerDashboard</class>
+ <widget class="QWidget" name="CustomerDashboard">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1280</width>
+    <height>800</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Customer Dashboard</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget { background: transparent; color: #f0f0f5; }</string>
+  </property>
+  <layout class="QVBoxLayout" name="rootLayout">
+   <property name="spacing"><number>0</number></property>
+   <property name="leftMargin"><number>0</number></property>
+   <property name="topMargin"><number>0</number></property>
+   <property name="rightMargin"><number>0</number></property>
+   <property name="bottomMargin"><number>0</number></property>
+   <item>
+    <widget class="ShellWidget" name="shell" native="true"/>
+   </item>
+  </layout>
+
+  <!-- Hidden page source: pages will be reparented at runtime -->
+  <widget class="QStackedWidget" name="pageSource">
+   <property name="visible"><bool>false</bool></property>
+
+   <widget class="QWidget" name="homePage">
+    <layout class="QVBoxLayout" name="homeLay">
+     <property name="leftMargin"><number>32</number></property>
+     <property name="topMargin"><number>32</number></property>
+     <property name="rightMargin"><number>32</number></property>
+     <property name="bottomMargin"><number>32</number></property>
+     <property name="spacing"><number>20</number></property>
+     <item>
+      <widget class="QLabel" name="greetLbl">
+       <property name="text"><string>Welcome back! 👋</string></property>
+       <property name="styleSheet"><string>font-size: 24px; font-weight: 800; color: #f0f0f5;</string></property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="c_statsRow">
+       <property name="spacing"><number>16</number></property>
+      </layout>
+     </item>
+     <item>
+      <widget class="QLabel" name="notifLabel">
+       <property name="styleSheet"><string>font-size: 14px; font-weight: 600; color: #ffd166; background: rgba(255,209,102,0.08); border: 1px solid rgba(255,209,102,0.2); border-radius: 10px; padding: 8px 16px;</string></property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="hSpacer"><property name="orientation"><enum>Qt::Vertical</enum></property></spacer>
+     </item>
+    </layout>
+   </widget>
+
+   <widget class="QWidget" name="shopPage">
+    <layout class="QVBoxLayout" name="shopLay">
+     <property name="leftMargin"><number>32</number></property>
+     <property name="topMargin"><number>32</number></property>
+     <property name="rightMargin"><number>32</number></property>
+     <property name="bottomMargin"><number>32</number></property>
+     <property name="spacing"><number>20</number></property>
+     <item>
+      <layout class="QHBoxLayout" name="searchRow">
+       <property name="spacing"><number>10</number></property>
+       <item>
+        <widget class="QLineEdit" name="searchEdit">
+         <property name="placeholderText"><string>🔍  Search products, brands, categories...</string></property>
+         <property name="minimumHeight"><number>40</number></property>
+         <property name="styleSheet"><string>QLineEdit { background-color: #1a1a2e; color: #f0f0f5; border: 1px solid #252540; border-radius: 20px; padding-left: 18px; font-size: 14px; }</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="searchBtn">
+         <property name="text"><string>Search</string></property>
+         <property name="objectName"><string>primaryBtn</string></property>
+         <property name="minimumHeight"><number>38</number></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="clearBtn">
+         <property name="text"><string>All</string></property>
+         <property name="objectName"><string>logoutBtn</string></property>
+         <property name="minimumHeight"><number>38</number></property>
+        </widget>
+       </item>
+       <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeType"><enum>QSizePolicy::Fixed</enum></property><property name="sizeHint"><size><width>8</width><height>0</height></size></property></spacer></item>
+       <item>
+        <widget class="QComboBox" name="catCombo">
+         <property name="minimumHeight"><number>38</number></property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="QWidget" name="productsContainer" native="true">
+       <property name="objectName"><string>productsGrid</string></property>
+      </widget>
+     </item>
+     <item><spacer><property name="orientation"><enum>Qt::Vertical</enum></property></spacer></item>
+    </layout>
+   </widget>
+
+   <widget class="QWidget" name="cartPage">
+    <layout class="QVBoxLayout" name="cartLay">
+     <property name="leftMargin"><number>32</number></property>
+     <property name="topMargin"><number>32</number></property>
+     <property name="rightMargin"><number>32</number></property>
+     <property name="bottomMargin"><number>32</number></property>
+     <property name="spacing"><number>20</number></property>
+     <item>
+      <widget class="QLabel" name="crtTitle">
+       <property name="text"><string>🛒  My Cart</string></property>
+       <property name="styleSheet"><string>font-size: 24px; font-weight: 800; color: #e0e0f0;</string></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QTableWidget" name="cartTable"/>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="cBtnsLay">
+       <item>
+        <widget class="QPushButton" name="removeBtn">
+         <property name="text"><string>🗑 Remove</string></property>
+         <property name="objectName"><string>dangerBtn</string></property>
+         <property name="minimumHeight"><number>38</number></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="checkoutBtn">
+         <property name="text"><string>💳 Checkout</string></property>
+         <property name="objectName"><string>warnBtn</string></property>
+         <property name="minimumHeight"><number>38</number></property>
+        </widget>
+       </item>
+       <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property></spacer></item>
+       <item>
+        <widget class="QLabel" name="cartTotalLabel">
+         <property name="text"><string>Total: ₹0</string></property>
+         <property name="objectName"><string>balanceLabel</string></property>
+         <property name="styleSheet"><string>font-size: 16px; font-weight: 700; color: #06d6a0;</string></property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item><spacer><property name="orientation"><enum>Qt::Vertical</enum></property></spacer></item>
+    </layout>
+   </widget>
+
+   <widget class="QWidget" name="ordersPage">
+    <layout class="QVBoxLayout" name="oLay">
+     <property name="leftMargin"><number>32</number></property>
+     <property name="topMargin"><number>32</number></property>
+     <property name="rightMargin"><number>32</number></property>
+     <property name="bottomMargin"><number>32</number></property>
+     <property name="spacing"><number>20</number></property>
+     <item>
+      <widget class="QLabel" name="oTitle">
+       <property name="text"><string>📦  My Orders</string></property>
+       <property name="styleSheet"><string>font-size: 24px; font-weight: 800; color: #e0e0f0;</string></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QTableWidget" name="orderTable"/>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="oBtnsLay">
+       <item>
+        <widget class="QPushButton" name="cancelBtn">
+         <property name="text"><string>❌ Cancel Order</string></property>
+         <property name="objectName"><string>dangerBtn</string></property>
+         <property name="minimumHeight"><number>38</number></property>
+        </widget>
+       </item>
+       <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property></spacer></item>
+      </layout>
+     </item>
+     <item><spacer><property name="orientation"><enum>Qt::Vertical</enum></property></spacer></item>
+    </layout>
+   </widget>
+
+   <widget class="QWidget" name="profilePage">
+    <layout class="QVBoxLayout" name="prLay">
+     <property name="leftMargin"><number>32</number></property>
+     <property name="topMargin"><number>32</number></property>
+     <property name="rightMargin"><number>32</number></property>
+     <property name="bottomMargin"><number>32</number></property>
+     <property name="spacing"><number>16</number></property>
+     <item>
+      <widget class="QLabel" name="prTitle">
+       <property name="text"><string>👤  My Profile</string></property>
+       <property name="styleSheet"><string>font-size: 24px; font-weight: 800; color: #e0e0f0;</string></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="profileLabel">
+       <property name="objectName"><string>profileLabel</string></property>
+       <property name="wordWrap"><bool>true</bool></property>
+       <property name="alignment"><set>Qt::AlignTop|Qt::AlignLeft</set></property>
+       <property name="styleSheet"><string>font-size: 14px; color: #f0f0f5; padding: 24px; background-color: #1a1a2e; border: 1px solid #252540; border-radius: 16px; line-height: 1.8;</string></property>
+      </widget>
+     </item>
+     <item><spacer><property name="orientation"><enum>Qt::Vertical</enum></property></spacer></item>
+    </layout>
+   </widget>
+
+  </widget>
+ </widget>
+
+ <customwidgets>
+  <customwidget>
+   <class>ShellWidget</class>
+   <extends>QWidget</extends>
+   <header>shellwidget.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

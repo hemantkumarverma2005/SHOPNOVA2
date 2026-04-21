@@ -65,6 +65,7 @@ public:
     QVector<Product*>     getProductsBySeller(int sellerId);
     int                   addProduct(std::unique_ptr<Product> p);
     void                  toggleProductStatus(int productId);
+    void                  deleteProduct(int productId);
 
     // ORDER OPERATIONS
     Order*                placeOrder(Customer* customer, const Address& address, PaymentMethod method);

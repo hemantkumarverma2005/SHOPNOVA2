@@ -12,6 +12,11 @@
 #include <QScrollArea>
 #include <QFormLayout>
 #include <QLineEdit>
+#include <QButtonGroup>
+#include <QRadioButton>
+#include <QDialog>
+#include <QSet>
+#include <QPixmap>
 #include "flowlayout.h"
 
 // ── Helper: create a stat card widget ─────────────────────────
@@ -403,22 +408,167 @@ void CustomerDashboard::onCheckout() {
         }
     }
 
-    QStringList methods = {"Cash on Delivery (COD)", "UPI", "Credit/Debit Card",
-                           "Net Banking", QString::fromUtf8("Wallet (₹") + QString::number((int)m_customer->getWalletBalance()) + ")"};
-    bool ok;
-    QString chosen = QInputDialog::getItem(this, "Payment Method",
-        QString(QString::fromUtf8("Cart Total: ₹%1\nDelivery Address: %2\n\nPayment Method:"))
-            .arg((int)m_customer->getCart().getTotal())
-            .arg(addr->toString()),
-        methods, 0, false, &ok);
-    if (!ok) return;
+    const QVector<CartItem>& cartItems = m_customer->getCart().getItems();
 
-    PaymentMethod pm;
-    if (chosen.startsWith("UPI"))          pm = PaymentMethod::UPI;
-    else if (chosen.startsWith("Credit"))  pm = PaymentMethod::CARD;
-    else if (chosen.startsWith("Net"))     pm = PaymentMethod::NETBANKING;
-    else if (chosen.startsWith("Wallet"))  pm = PaymentMethod::WALLET;
-    else                                   pm = PaymentMethod::COD;
+    // Determine QR Path Logic (as implemented in CartPanel)
+    QString qrPath;
+    QSet<int> sidCheck;
+    for (const CartItem& ci : cartItems) sidCheck.insert(ci.sellerId);
+    if (sidCheck.size() > 1) {
+        qrPath = m_platform->getAdminQrPath();
+    } else if (sidCheck.size() == 1) {
+        Seller* s = m_platform->getSellerById(*sidCheck.begin());
+        qrPath = s ? s->getQrImagePath() : QString();
+    }
+
+    // Determine sellers for per-seller split display
+    QSet<int> sellerIds;
+    QMap<int, QString> sellerNames;
+    QMap<int, double>  sellerTotals;
+    for (const CartItem& ci : cartItems) {
+        sellerIds.insert(ci.sellerId);
+        sellerNames[ci.sellerId] = ci.sellerName;
+        sellerTotals[ci.sellerId] += ci.getTotal();
+    }
+    bool isMultiShop = sellerIds.size() > 1;
+
+    // ── Build checkout dialog ─────────────────────────────────
+    QDialog dlg(this);
+    dlg.setWindowTitle("Checkout");
+    dlg.setFixedWidth(520);
+    dlg.setStyleSheet("QDialog { background: #1e1840; color: white; border-radius: 16px; }");
+
+    QVBoxLayout* root = new QVBoxLayout(&dlg);
+    root->setContentsMargins(28, 24, 28, 24);
+    root->setSpacing(16);
+
+    // Title
+    QLabel* title = new QLabel(isMultiShop ? "🛍️  Multi-Shop Order" : "🛍️  Order Summary", &dlg);
+    title->setStyleSheet("font-size: 20px; font-weight: 800; color: white; background: transparent;");
+    root->addWidget(title);
+
+    // Per-seller breakdown
+    if (isMultiShop) {
+        QLabel* note = new QLabel("Your cart has items from multiple shops. Payment goes to the platform.", &dlg);
+        note->setWordWrap(true);
+        note->setStyleSheet("font-size: 11px; color: #9590b8; background: rgba(124,92,252,0.12);"
+                            "border-radius: 8px; padding: 8px 12px;");
+        root->addWidget(note);
+    }
+
+    // Seller breakdown table
+    QFrame* breakdown = new QFrame(&dlg);
+    breakdown->setStyleSheet("background: rgba(255,255,255,0.06); border-radius: 12px;");
+    QVBoxLayout* bvl = new QVBoxLayout(breakdown);
+    bvl->setContentsMargins(16, 12, 16, 12); bvl->setSpacing(8);
+    for (int sid : sellerIds) {
+        QHBoxLayout* row = new QHBoxLayout();
+        QLabel* sn = new QLabel("🏪  " + sellerNames[sid], breakdown);
+        sn->setStyleSheet("color: white; font-size: 13px; font-weight: 600; background: transparent;");
+        QLabel* amt = new QLabel(QString("₹%1").arg(sellerTotals[sid], 0, 'f', 2), breakdown);
+        amt->setStyleSheet("color: #a78bfa; font-size: 13px; font-weight: 700; background: transparent;");
+        amt->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        row->addWidget(sn); row->addStretch(); row->addWidget(amt);
+        bvl->addLayout(row);
+    }
+    QFrame* sep = new QFrame(breakdown); sep->setFrameShape(QFrame::HLine);
+    sep->setStyleSheet("color: rgba(255,255,255,0.1);");
+    bvl->addWidget(sep);
+    QHBoxLayout* totalRow = new QHBoxLayout();
+    QLabel* tl = new QLabel("TOTAL PAYABLE", breakdown);
+    tl->setStyleSheet("color: #9590b8; font-size: 11px; font-weight: 700; letter-spacing: 1px; background: transparent;");
+    QLabel* tv = new QLabel(QString("₹%1").arg(m_customer->getCart().getTotal(), 0, 'f', 2), breakdown);
+    tv->setStyleSheet("color: white; font-size: 18px; font-weight: 800; background: transparent;");
+    tv->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    totalRow->addWidget(tl); totalRow->addStretch(); totalRow->addWidget(tv);
+    bvl->addLayout(totalRow);
+    root->addWidget(breakdown);
+
+    // Payment method selection
+    QLabel* pmLabel = new QLabel("Payment Method", &dlg);
+    pmLabel->setStyleSheet("font-size: 13px; font-weight: 700; color: #9590b8; background: transparent;");
+    root->addWidget(pmLabel);
+
+    QButtonGroup* btnGroup = new QButtonGroup(&dlg);
+    auto makeRadio = [&](const QString& label, bool enabled = true) {
+        QRadioButton* rb = new QRadioButton(label, &dlg);
+        rb->setEnabled(enabled);
+        rb->setStyleSheet(enabled
+            ? "color: white; font-size: 13px; background: transparent;"
+            : "color: #555575; font-size: 13px; background: transparent;");
+        btnGroup->addButton(rb);
+        root->addWidget(rb);
+        return rb;
+    };
+
+    QRadioButton* rbCOD = makeRadio("💵  Cash on Delivery");
+    rbCOD->setChecked(true);
+    QRadioButton* rbUPI = nullptr;
+
+    bool hasQr = !qrPath.isEmpty();
+    if (hasQr) {
+        rbUPI = makeRadio("📱  UPI / QR Payment");
+
+        // QR image
+        QLabel* qrImg = new QLabel(&dlg);
+        qrImg->setFixedSize(200, 200);
+        qrImg->setAlignment(Qt::AlignCenter);
+        qrImg->setStyleSheet("background: white; border-radius: 12px;");
+        QPixmap px;
+        if (px.load(qrPath)) {
+            qrImg->setPixmap(px.scaled(200, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        } else {
+            qrImg->setText("QR unavailable");
+            qrImg->setStyleSheet("color: #9590b8; font-size: 13px; background: #252048; border-radius: 12px;");
+        }
+        QHBoxLayout* qrRow = new QHBoxLayout();
+        qrRow->addStretch(); qrRow->addWidget(qrImg); qrRow->addStretch();
+        root->addLayout(qrRow);
+
+        QString qrNote = isMultiShop
+            ? "Scan this platform QR to pay the full amount."
+            : "Scan this shop's UPI QR to pay.";
+        QLabel* qrNoteL = new QLabel(qrNote, &dlg);
+        qrNoteL->setAlignment(Qt::AlignCenter);
+        qrNoteL->setStyleSheet("font-size: 11px; color: #9590b8; background: transparent;");
+        root->addWidget(qrNoteL);
+    } else {
+        // No QR available note
+        QLabel* noQr = new QLabel("⚠️  No UPI QR available — only COD offered.", &dlg);
+        noQr->setStyleSheet("font-size: 11px; color: #fde68a; background: rgba(251,191,36,0.1);"
+                            "border-radius: 8px; padding: 8px 12px;");
+        root->addWidget(noQr);
+    }
+
+    // Confirm button
+    QPushButton* confirmBtn = new QPushButton("✅  Confirm & Place Order", &dlg);
+    confirmBtn->setFixedHeight(48);
+    confirmBtn->setCursor(Qt::PointingHandCursor);
+    confirmBtn->setStyleSheet(R"(
+        QPushButton { background: qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 #7c5cfc,stop:1 #a855f7);
+            color: white; border: none; border-radius: 24px;
+            font-size: 14px; font-weight: 700; letter-spacing: 1px; }
+        QPushButton:hover { opacity: 0.9; }
+    )");
+    connect(confirmBtn, &QPushButton::clicked, &dlg, &QDialog::accept);
+
+    QPushButton* cancelBtn = new QPushButton("Cancel", &dlg);
+    cancelBtn->setFixedHeight(36);
+    cancelBtn->setStyleSheet(R"(
+        QPushButton { background: transparent; color: #9590b8; border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 18px; font-size: 13px; }
+        QPushButton:hover { color: white; border-color: rgba(255,255,255,0.3); }
+    )");
+    connect(cancelBtn, &QPushButton::clicked, &dlg, &QDialog::reject);
+
+    root->addWidget(confirmBtn);
+    root->addWidget(cancelBtn);
+
+    if (dlg.exec() != QDialog::Accepted) return;
+
+    // Determine payment method
+    PaymentMethod pm = PaymentMethod::COD;
+    if (rbUPI && rbUPI->isChecked()) pm = PaymentMethod::UPI;
 
     try {
         Order* order = m_platform->placeOrder(m_customer, *addr, pm);

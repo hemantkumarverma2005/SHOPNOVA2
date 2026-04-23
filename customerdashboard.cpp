@@ -153,15 +153,22 @@ CustomerDashboard::CustomerDashboard(Customer* customer, Platform* platform, QWi
     connect(ui->checkoutBtn, &QPushButton::clicked, this, &CustomerDashboard::onCheckout);
     connect(ui->cancelBtn, &QPushButton::clicked, this, &CustomerDashboard::onCancelOrder);
 
+    // ── Dual-browse: Shop-by-Store nav ───────────────────────────
+    m_shopNav = new ShopNavController(m_platform, m_customer, this);
+    // When checkout completes inside the nav, refresh orders/cart
+    connect(m_shopNav, &ShopNavController::checkoutRequested,
+            this, &CustomerDashboard::refresh);
+
     // Build nav structure with section headers
     QVector<NavItem> nav = {
-        {"",                         "Main",      nullptr},
-        {QString::fromUtf8("🏠"),    "Home",      h_scroll},
-        {QString::fromUtf8("🛍️"),   "Shop",      s_scroll},
-        {QString::fromUtf8("🛒"),    "Cart",      c_scroll},
-        {"",                         "Account",   nullptr},
-        {QString::fromUtf8("📦"),    "My Orders", o_scroll},
-        {QString::fromUtf8("👤"),    "Profile",   p_scroll},
+        {"",                         "Main",          nullptr},
+        {QString::fromUtf8("🏠"),    "Home",          h_scroll},
+        {QString::fromUtf8("🏪"),    "Browse Shops",  m_shopNav},
+        {QString::fromUtf8("🛍️"),   "All Products",  s_scroll},
+        {QString::fromUtf8("🛒"),    "Cart",          c_scroll},
+        {"",                         "Account",       nullptr},
+        {QString::fromUtf8("📦"),    "My Orders",     o_scroll},
+        {QString::fromUtf8("👤"),    "Profile",       p_scroll},
     };
 
     ui->shell->configure("ShopNova", m_customer->getName(), "Customer", nav);

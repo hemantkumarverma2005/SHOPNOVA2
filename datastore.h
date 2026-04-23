@@ -34,6 +34,7 @@ class Platform {
     int    m_nextProductId = 1;
     double m_totalRevenue  = 0;
     QString m_platformName = "ShopNova";
+    QString m_adminQrPath;          // platform-wide QR shown for multi-shop carts
 
     Platform();
     void seedData();
@@ -66,6 +67,13 @@ public:
     int                   addProduct(std::unique_ptr<Product> p);
     void                  toggleProductStatus(int productId);
     void                  deleteProduct(int productId);
+
+    // SELLER LOOKUP
+    Seller*               getSellerById(int id);
+
+    // ADMIN QR
+    QString               getAdminQrPath() const  { return m_adminQrPath; }
+    void                  setAdminQrPath(const QString& p) { m_adminQrPath = p; saveToDisk(); }
 
     // ORDER OPERATIONS
     Order*                placeOrder(Customer* customer, const Address& address, PaymentMethod method);

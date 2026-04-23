@@ -10,6 +10,9 @@
 #include <QGraphicsDropShadowEffect>
 #include <QPainter>
 #include <QTimer>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QFile>
 
 LoginPage::LoginPage(QWidget* parent) : QWidget(parent) {
     buildUI();
@@ -344,6 +347,34 @@ void LoginPage::buildUI() {
     m_selPhone     = new QLineEdit; m_selPhone->setPlaceholderText("Phone number"); m_selPhone->setMinimumHeight(44);
     m_selStoreName = new QLineEdit; m_selStoreName->setPlaceholderText("Your store / shop name"); m_selStoreName->setMinimumHeight(44);
 
+    // QR Upload row
+    QHBoxLayout* qrLayout = new QHBoxLayout;
+    QPushButton* qrBtn    = new QPushButton(QString::fromUtf8("📷  Browse QR Image"));
+    qrBtn->setMinimumHeight(40);
+    qrBtn->setObjectName("ghostBtn");
+    m_selQrLabel = new QLabel("No QR selected  (optional)");
+    m_selQrLabel->setStyleSheet("font-size: 11px; color: #7878a0; background: transparent; border: none;");
+    qrLayout->addWidget(qrBtn);
+    qrLayout->addWidget(m_selQrLabel, 1);
+
+    connect(qrBtn, &QPushButton::clicked, [this]() {
+        QString path = QFileDialog::getOpenFileName(
+            this, "Select UPI QR Image", "", "Images (*.png *.jpg *.jpeg *.webp)");
+        if (!path.isEmpty()) {
+            m_selQrPath = path;
+            m_selQrLabel->setText(QFileInfo(path).fileName());
+            m_selQrLabel->setStyleSheet("font-size: 11px; color: #06d6a0; background: transparent; border: none;");
+        }
+    });
+
+    // Info note
+    QLabel* qrNote = new QLabel(
+        QString::fromUtf8("💡  Without a QR, customers can only pay Cash on Delivery for orders from your shop."));
+    qrNote->setWordWrap(true);
+    qrNote->setStyleSheet(
+        "font-size: 11px; color: #7878a0; background: rgba(255,107,43,0.06);"
+        "border: 1px solid rgba(255,107,43,0.15); border-radius: 8px; padding: 8px 12px;");
+
     QPushButton* selBtn = new QPushButton(QString::fromUtf8("Open My Shop  →"));
     selBtn->setObjectName("warnBtn");
     selBtn->setMinimumHeight(48);
@@ -359,6 +390,17 @@ void LoginPage::buildUI() {
     addField(selLay, "Password", m_selPassword);
     addField(selLay, "Phone", m_selPhone);
     addField(selLay, "Store Name", m_selStoreName);
+    selLay->addSpacing(4);
+    // QR row label
+    {
+        QLabel* qrFieldLabel = new QLabel("UPI QR Code");
+        qrFieldLabel->setStyleSheet(
+            "font-size: 13px; font-weight: 500; color: #9494a8;"
+            "background: transparent; border: none;");
+        selLay->addWidget(qrFieldLabel);
+    }
+    selLay->addLayout(qrLayout);
+    selLay->addWidget(qrNote);
     selLay->addSpacing(8);
     selLay->addWidget(selBtn);
     selLay->addStretch();
@@ -391,7 +433,11 @@ void LoginPage::onRegisterSellerClicked() {
         m_selEmail->text().trimmed(),
         m_selPassword->text(),
         m_selPhone->text().trimmed(),
-        m_selStoreName->text().trimmed());
+        m_selStoreName->text().trimmed(),
+        m_selQrPath);
     m_selName->clear(); m_selEmail->clear();
     m_selPassword->clear(); m_selPhone->clear(); m_selStoreName->clear();
+    m_selQrPath.clear();
+    m_selQrLabel->setText("No QR selected  (optional)");
+    m_selQrLabel->setStyleSheet("font-size: 11px; color: #7878a0; background: transparent; border: none;");
 }

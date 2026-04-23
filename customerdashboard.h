@@ -8,6 +8,7 @@
 #include "shellwidget.h"
 #include "datastore.h"
 #include "flowlayout.h"
+#include "shopnavcontroller.h"
 
 namespace Ui {
 class CustomerDashboard;
@@ -39,6 +40,7 @@ private:
     void refreshProfile();
 
     Ui::CustomerDashboard* ui;
-    Customer* m_customer;
-    Platform* m_platform;
+    Customer*           m_customer;
+    Platform*           m_platform;
+    ShopNavController*  m_shopNav = nullptr;   // Browse Shops mode
 };

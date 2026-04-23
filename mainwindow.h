@@ -19,7 +19,7 @@ private slots:
                             const QString& password, const QString& phone);
     void onRegisterSeller(const QString& name, const QString& email,
                           const QString& password, const QString& phone,
-                          const QString& storeName);
+                          const QString& storeName, const QString& qrImagePath);
     void onLogout();
 
 private:

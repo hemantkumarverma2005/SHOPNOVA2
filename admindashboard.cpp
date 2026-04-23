@@ -14,6 +14,11 @@
 #include <QPushButton>
 #include <QLineEdit>
 #include <QScrollArea>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QFile>
+#include <QDir>
+#include <QPixmap>
 
 // ── Helper: create a stat card widget ─────────────────────────
 static QFrame* makeStatCard(const QString& icon, const QString& value,
@@ -157,6 +162,65 @@ AdminDashboard::AdminDashboard(Admin* admin, Platform* platform, QWidget* parent
 
     // Connect action tiles to navigate to respective pages
     connect(tileAddProd, &QPushButton::clicked, this, &AdminDashboard::onAddProduct);
+
+    // ── Platform QR Card ──────────────────────────────────────────
+    {
+        QFrame* qrCard = new QFrame(ui->dashboardPage);
+        qrCard->setStyleSheet(
+            "QFrame { background: #1a1a2e; border: 1px solid #252540;"
+            "border-radius: 16px; }");
+        QVBoxLayout* qrVl = new QVBoxLayout(qrCard);
+        qrVl->setContentsMargins(24, 20, 24, 20);
+        qrVl->setSpacing(14);
+
+        QLabel* qrTitle = new QLabel(
+            QString::fromUtf8("🔲  Platform Payment QR"), qrCard);
+        qrTitle->setStyleSheet(
+            "font-size: 15px; font-weight: 700; color: #f0f0f5;"
+            "background: transparent; border: none;");
+        QLabel* qrSubtitle = new QLabel(
+            "Shown at checkout when a customer orders from multiple shops.", qrCard);
+        qrSubtitle->setWordWrap(true);
+        qrSubtitle->setStyleSheet(
+            "font-size: 12px; color: #7878a0; background: transparent; border: none;");
+
+        m_adminQrDisplay = new QLabel(qrCard);
+        m_adminQrDisplay->setFixedSize(180, 180);
+        m_adminQrDisplay->setAlignment(Qt::AlignCenter);
+        m_adminQrDisplay->setStyleSheet(
+            "background: #252540; border-radius: 12px; border: none;");
+        refreshAdminQrDisplay();
+
+        m_adminQrStatus = new QLabel(qrCard);
+        m_adminQrStatus->setWordWrap(true);
+        m_adminQrStatus->setStyleSheet("background: transparent; border: none; font-size: 12px;");
+        updateAdminQrStatus();
+
+        QPushButton* setQrBtn = new QPushButton(
+            QString::fromUtf8("📷  Set Platform QR"), qrCard);
+        setQrBtn->setObjectName("successBtn");
+        setQrBtn->setFixedHeight(40);
+        setQrBtn->setCursor(Qt::PointingHandCursor);
+        connect(setQrBtn, &QPushButton::clicked, this, &AdminDashboard::onSetAdminQr);
+
+        QHBoxLayout* qrRow = new QHBoxLayout;
+        QVBoxLayout* qrLeft = new QVBoxLayout;
+        qrLeft->setSpacing(10);
+        qrLeft->addWidget(m_adminQrDisplay);
+        qrLeft->addWidget(setQrBtn);
+        QVBoxLayout* qrRight = new QVBoxLayout;
+        qrRight->setSpacing(8);
+        qrRight->addWidget(qrTitle);
+        qrRight->addWidget(qrSubtitle);
+        qrRight->addWidget(m_adminQrStatus);
+        qrRight->addStretch();
+        qrRow->addLayout(qrLeft);
+        qrRow->addSpacing(20);
+        qrRow->addLayout(qrRight, 1);
+        qrVl->addLayout(qrRow);
+
+        ui->dashLayout->insertWidget(0, qrCard);
+    }
 
     // Wrapper scroll areas
     QScrollArea *d_scroll = new QScrollArea; d_scroll->setWidgetResizable(true); d_scroll->setWidget(ui->dashboardPage); d_scroll->setFrameShape(QFrame::NoFrame);
@@ -417,4 +481,62 @@ void AdminDashboard::onToggleUser() {
     m_platform->toggleUserStatus(uid);
     m_admin->logAction("Toggled user #" + QString::number(uid));
     refreshCustomers();
+}
+
+// ─── Admin QR Helpers ────────────────────────────────────────────────────────
+
+void AdminDashboard::refreshAdminQrDisplay() {
+    if (!m_adminQrDisplay) return;
+    QPixmap px;
+    if (!m_platform->getAdminQrPath().isEmpty())
+        px.load(m_platform->getAdminQrPath());
+    if (!px.isNull()) {
+        m_adminQrDisplay->setPixmap(
+            px.scaled(180, 180, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        m_adminQrDisplay->setStyleSheet(
+            "background: white; border-radius: 12px; border: none;");
+    } else {
+        m_adminQrDisplay->setText(QString::fromUtf8("🔲\nNot set"));
+        m_adminQrDisplay->setAlignment(Qt::AlignCenter);
+        m_adminQrDisplay->setStyleSheet(
+            "color: #7878a0; font-size: 24px; background: #252540;"
+            "border-radius: 12px; border: none;");
+    }
+}
+
+void AdminDashboard::updateAdminQrStatus() {
+    if (!m_adminQrStatus) return;
+    if (!m_platform->getAdminQrPath().isEmpty()) {
+        m_adminQrStatus->setText(
+            QString::fromUtf8("<span style='color:#06d6a0; font-weight:700;'>"
+                              "✅ Platform QR active</span><br>"
+                              "<span style='color:#7878a0;'>"
+                              "Shown when customer cart spans multiple shops.</span>"));
+    } else {
+        m_adminQrStatus->setText(
+            QString::fromUtf8("<span style='color:#ffd166; font-weight:700;'>"
+                              "⚠️ No platform QR set</span><br>"
+                              "<span style='color:#7878a0;'>"
+                              "Multi-shop orders will show COD only.</span>"));
+    }
+}
+
+void AdminDashboard::onSetAdminQr() {
+    QString path = QFileDialog::getOpenFileName(
+        this, "Select Platform UPI QR", "", "Images (*.png *.jpg *.jpeg *.webp)");
+    if (path.isEmpty()) return;
+
+    QDir().mkpath("data/qr");
+    QString ext  = QFileInfo(path).suffix();
+    QString dest = QString("data/qr/admin_platform.%1").arg(ext);
+    QFile::remove(dest);  // overwrite
+    if (QFile::copy(path, dest)) {
+        m_platform->setAdminQrPath(dest);
+        refreshAdminQrDisplay();
+        updateAdminQrStatus();
+        QMessageBox::information(this, QString::fromUtf8("Platform QR Saved ✅"),
+            "Platform QR saved. Multi-shop checkouts will now show this QR.");
+    } else {
+        QMessageBox::warning(this, "Error", "Could not copy the image.");
+    }
 }

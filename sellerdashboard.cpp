@@ -16,8 +16,10 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFile>
+#include <QDir>
 #include <QColor>
 #include <QLayoutItem>
+#include <QPixmap>
 
 // ── Helper: create a stat card widget ─────────────────────────
 static QFrame* makeStatCard(const QString& label, const QString& value,
@@ -172,6 +174,60 @@ SellerDashboard::SellerDashboard(Seller* seller, Platform* platform, QWidget* pa
         .arg(m_seller->getRating(), 0, 'f', 1)
         .arg(m_seller->getProductIds().size())
     );
+
+    // ── QR section appended below profile text ──────────────────
+    // Find the profile page layout and add a QR card below the profile label
+    {
+        QWidget* profilePage = ui->profilePage;
+        QVBoxLayout* pLay = qobject_cast<QVBoxLayout*>(profilePage->layout());
+        if (!pLay) {
+            pLay = new QVBoxLayout(profilePage);
+            pLay->setContentsMargins(24, 24, 24, 24);
+        }
+
+        // QR card frame
+        QFrame* qrCard = new QFrame(profilePage);
+        qrCard->setStyleSheet(
+            "QFrame { background: #1a1a2e; border: 1px solid #252540;"
+            "border-radius: 16px; }");
+        QVBoxLayout* qrVl = new QVBoxLayout(qrCard);
+        qrVl->setContentsMargins(24, 20, 24, 20);
+        qrVl->setSpacing(14);
+
+        // Title
+        QLabel* qrTitle = new QLabel(QString::fromUtf8("🔲  Payment QR Code"), qrCard);
+        qrTitle->setStyleSheet(
+            "font-size: 16px; font-weight: 700; color: #f0f0f5;"
+            "background: transparent; border: none;");
+        qrVl->addWidget(qrTitle);
+
+        // QR image display
+        m_qrDisplay = new QLabel(qrCard);
+        m_qrDisplay->setFixedSize(180, 180);
+        m_qrDisplay->setAlignment(Qt::AlignCenter);
+        m_qrDisplay->setStyleSheet(
+            "background: #252540; border-radius: 12px; border: none;");
+        refreshQrDisplay();
+        qrVl->addWidget(m_qrDisplay, 0, Qt::AlignLeft);
+
+        // Status label
+        m_qrStatusLbl = new QLabel(qrCard);
+        m_qrStatusLbl->setWordWrap(true);
+        m_qrStatusLbl->setStyleSheet("background: transparent; border: none; font-size: 12px;");
+        updateQrStatusLabel();
+        qrVl->addWidget(m_qrStatusLbl);
+
+        // Change / Upload button
+        QPushButton* changeQrBtn = new QPushButton(
+            QString::fromUtf8("📷  Upload / Change QR"), qrCard);
+        changeQrBtn->setObjectName("successBtn");
+        changeQrBtn->setFixedHeight(40);
+        changeQrBtn->setCursor(Qt::PointingHandCursor);
+        connect(changeQrBtn, &QPushButton::clicked, this, &SellerDashboard::onChangeQr);
+        qrVl->addWidget(changeQrBtn);
+
+        pLay->addWidget(qrCard);
+    }
 
     // Extract pages out to wrapper scroll areas
     QScrollArea *o_scroll = new QScrollArea; o_scroll->setWidgetResizable(true); o_scroll->setWidget(ui->overviewPage); o_scroll->setFrameShape(QFrame::NoFrame);
@@ -390,4 +446,66 @@ void SellerDashboard::onUpdateOrderStatus() {
                      (chosen == "Shipped")   ? OrderStatus::SHIPPED   : OrderStatus::DELIVERED;
     m_platform->updateOrderStatus(oid, ns);
     refreshOrders();
+}
+
+// ─── QR Helpers ──────────────────────────────────────────────────────────────
+
+void SellerDashboard::refreshQrDisplay() {
+    if (!m_qrDisplay) return;
+    QString path = m_seller->getQrImagePath();
+    QPixmap px;
+    if (!path.isEmpty()) px.load(path);
+    if (!px.isNull()) {
+        m_qrDisplay->setPixmap(px.scaled(180, 180, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        m_qrDisplay->setStyleSheet(
+            "background: white; border-radius: 12px; border: none;");
+    } else {
+        m_qrDisplay->setText(QString::fromUtf8("🔲\nNo QR uploaded"));
+        m_qrDisplay->setAlignment(Qt::AlignCenter);
+        m_qrDisplay->setStyleSheet(
+            "color: #7878a0; font-size: 28px; background: #252540;"
+            "border-radius: 12px; border: none;");
+    }
+}
+
+void SellerDashboard::updateQrStatusLabel() {
+    if (!m_qrStatusLbl) return;
+    if (m_seller->hasQr()) {
+        m_qrStatusLbl->setText(
+            QString::fromUtf8("<span style='color:#06d6a0; font-weight:700;'>"
+                              "✅ UPI QR active</span>"
+                              "<br><span style='color:#7878a0;'>"
+                              "Customers can pay online via UPI.</span>"));
+    } else {
+        m_qrStatusLbl->setText(
+            QString::fromUtf8("<span style='color:#ffd166; font-weight:700;'>"
+                              "⚠️ No QR uploaded</span>"
+                              "<br><span style='color:#7878a0;'>"
+                              "Customers can only pay Cash on Delivery.</span>"));
+    }
+}
+
+void SellerDashboard::onChangeQr() {
+    QString path = QFileDialog::getOpenFileName(
+        this, "Select UPI QR Image", "", "Images (*.png *.jpg *.jpeg *.webp)");
+    if (path.isEmpty()) return;
+
+    QDir().mkpath("data/qr");
+    QString ext  = QFileInfo(path).suffix();
+    QString dest = QString("data/qr/seller_%1.%2").arg(m_seller->getId()).arg(ext);
+
+    // Remove old file if different
+    if (!m_seller->getQrImagePath().isEmpty() && m_seller->getQrImagePath() != dest)
+        QFile::remove(m_seller->getQrImagePath());
+
+    if (QFile::copy(path, dest)) {
+        m_seller->setQrImagePath(dest);
+        m_platform->saveToDisk();
+        refreshQrDisplay();
+        updateQrStatusLabel();
+        QMessageBox::information(this, QString::fromUtf8("QR Updated \u2705"),
+            "Your UPI QR has been saved. Customers will now see it at checkout.");
+    } else {
+        QMessageBox::warning(this, "Error", "Could not copy the image file.");
+    }
 }

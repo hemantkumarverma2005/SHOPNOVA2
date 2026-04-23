@@ -1,0 +1,13 @@
+﻿[  0%] Built target SHOPNOVA2_autogen_timestamp_deps
+[  4%] Built target SHOPNOVA2_autogen
+[  9%] Building CXX object CMakeFiles/SHOPNOVA2.dir/SHOPNOVA2_autogen/mocs_compilation.cpp.obj
+cmake.exe : mingw32-make.exe[2]: *** [CMakeFiles\SHOPNOVA2.dir\build.make:91: 
+CMakeFiles/SHOPNOVA2.dir/SHOPNOVA2_autogen/mocs_compilation.cpp.obj] Error 1
+At line:1 char:1
++ & "D:\QT\Tools\CMake_64\bin\cmake.exe" --build "d:\QT APPS\SHOPNOVA2\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (mingw32-make.ex...pp.obj] Error 1:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+mingw32-make.exe[1]: *** [CMakeFiles\Makefile2:85: CMakeFiles/SHOPNOVA2.dir/all] Error 2
+mingw32-make.exe: *** [Makefile:135: all] Error 2

@@ -26,13 +26,19 @@ private slots:
     void onSetDiscount();
     void onUpdateStock();
     void onUpdateOrderStatus();
+    void onChangeQr();
 
 private:
     void refreshProducts();
     void refreshOrders();
     void refreshStats();
+    void refreshQrDisplay();
+    void updateQrStatusLabel();
 
     Ui::SellerDashboard* ui;
     Seller*   m_seller;
     Platform* m_platform;
+
+    QLabel* m_qrDisplay    = nullptr;
+    QLabel* m_qrStatusLbl  = nullptr;
 };

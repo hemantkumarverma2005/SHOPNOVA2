@@ -185,6 +185,12 @@ QVector<Product*> Platform::getProductsBySeller(int sellerId) {
     return results;
 }
 
+Seller* Platform::getSellerById(int id) {
+    for (auto& s : m_sellers)
+        if (s->getId() == id) return s.get();
+    return nullptr;
+}
+
 int Platform::addProduct(std::unique_ptr<Product> p) {
     p->setId(m_nextProductId++);
     int id = p->getId();
@@ -393,8 +399,18 @@ void DataStore::save(Platform* p) {
                     << s->getStoreName()   << "\t"
                     << (s->getIsVerified() ? "1" : "0") << "\t"
                     << s->getGST()         << "\t"
-                    << s->getTotalRevenue()<< "\n";
+                    << s->getTotalRevenue()<< "\t"
+                    << s->getQrImagePath() << "\n";  // col 9
             }
+        }
+    }
+
+    // Save platform meta (admin QR)
+    {
+        QFile f("data/platform.tsv");
+        if (f.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QTextStream out(&f);
+            out << p->getAdminQrPath() << "\n";
         }
     }
 
@@ -473,10 +489,20 @@ void DataStore::load(Platform* p) {
                         parts[0].toInt(), parts[1], parts[2], parts[3], parts[4], parts[5]);
                     s->setVerified(parts[6] == "1");
                     if (parts.size() > 7) s->setGST(parts[7]);
+                    if (parts.size() > 9) s->setQrImagePath(parts[9]);  // col 9 = QR path
                     p->m_sellers.push_back(std::move(s));
                     if (parts[0].toInt() >= p->m_nextUserId) p->m_nextUserId = parts[0].toInt() + 1;
                 }
             }
+        }
+    }
+
+    // Load platform meta (admin QR)
+    {
+        QFile f("data/platform.tsv");
+        if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream in(&f);
+            if (!in.atEnd()) p->m_adminQrPath = in.readLine().trimmed();
         }
     }
 

@@ -171,6 +171,8 @@ struct CartItem {
     double  discountPercent;
     int     quantity;
     QString selectedSize;
+    int     sellerId   = 0;       // which seller this item belongs to
+    QString sellerName;           // seller / store name
 
     double getTotal() const {
         return price * (1.0 - discountPercent / 100.0) * quantity;
@@ -190,7 +192,15 @@ public:
                 return;
             }
         }
-        m_items.append({p->getId(), p->getName(), p->getPrice(), p->getDiscount(), qty, ""});
+        CartItem ci;
+        ci.productId      = p->getId();
+        ci.productName    = p->getName();
+        ci.price          = p->getPrice();
+        ci.discountPercent= p->getDiscount();
+        ci.quantity       = qty;
+        ci.sellerId       = p->getSellerId();
+        ci.sellerName     = p->getSellerName();
+        m_items.append(ci);
     }
 
     bool removeItem(int productId) {
@@ -506,6 +516,7 @@ class Seller : public User {
     bool         m_isVerified;
     double       m_commissionRate;
     QString      m_gstNumber;
+    QString      m_qrImagePath;   // path to seller's UPI QR image
 
 public:
     Seller(int id, const QString& name, const QString& email,
@@ -522,6 +533,8 @@ public:
     double  getRating()      const { return m_rating; }
     QString getGST()         const { return m_gstNumber; }
     double  getCommission()  const { return m_commissionRate; }
+    QString getQrImagePath() const { return m_qrImagePath; }
+    bool    hasQr()          const { return !m_qrImagePath.isEmpty(); }
     const QVector<int>& getProductIds() const { return m_productIds; }
     const QVector<int>& getOrderIds()   const { return m_orderIds; }
 
@@ -529,6 +542,7 @@ public:
     void setStoreName(const QString& s)   { m_storeName = s; }
     void setGST(const QString& g)         { m_gstNumber = g; }
     void setCommissionRate(double r)      { m_commissionRate = r; }
+    void setQrImagePath(const QString& p) { m_qrImagePath = p; }
 
     void addProductId(int pid)            { m_productIds.append(pid); }
     void addOrderId(int oid)              { m_orderIds.append(oid); }

@@ -49,6 +49,14 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         productcard.cpp
         productdetaildialog.h
         productdetaildialog.cpp
+        shopbrowserwidget.h
+        shopbrowserwidget.cpp
+        shopdetailwidget.h
+        shopdetailwidget.cpp
+        shopnavcontroller.h
+        shopnavcontroller.cpp
+        cartpanel.h
+        cartpanel.cpp
         resources.qrc
     )
 # Define target properties for Android with Qt 6 as:

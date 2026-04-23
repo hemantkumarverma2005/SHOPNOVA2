@@ -16,7 +16,7 @@ signals:
                                    const QString& password, const QString& phone);
     void registerSellerRequested(const QString& name, const QString& email,
                                  const QString& password, const QString& phone,
-                                 const QString& storeName);
+                                 const QString& storeName, const QString& qrImagePath);
 
 private slots:
     void onLoginClicked();
@@ -42,6 +42,8 @@ private:
     QLineEdit* m_selPassword;
     QLineEdit* m_selPhone;
     QLineEdit* m_selStoreName;
+    QString    m_selQrPath;       // path picked by file dialog
+    QLabel*    m_selQrLabel;      // shows filename or "No QR selected"
 
     QStackedWidget* m_formStack;
 };

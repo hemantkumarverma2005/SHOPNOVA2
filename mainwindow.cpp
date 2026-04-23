@@ -1,6 +1,9 @@
 #include "mainwindow.h"
 #include <QMessageBox>
 #include <QApplication>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
 
 // ═══════════════════════════════════════════════════════════════
 //  SHOPNOVA — Premium Dark Theme  (high-contrast edition)
@@ -602,16 +605,33 @@ void MainWindow::onRegisterCustomer(const QString& name, const QString& email,
 }
 
 void MainWindow::onRegisterSeller(const QString& name, const QString& email,
-                                  const QString& password, const QString& phone, const QString& storeName)
+                                  const QString& password, const QString& phone,
+                                  const QString& storeName, const QString& qrImagePath)
 {
     if (name.isEmpty() || email.isEmpty() || password.isEmpty() || storeName.isEmpty()) {
         QMessageBox::warning(this, "Register", "All fields are required."); return;
     }
     Seller* s = m_platform->registerSeller(name, email, password, phone, storeName);
+
+    // Copy QR image if provided
+    if (!qrImagePath.isEmpty()) {
+        QDir().mkpath("data/qr");
+        QString ext  = QFileInfo(qrImagePath).suffix();
+        QString dest = QString("data/qr/seller_%1.%2").arg(s->getId()).arg(ext);
+        if (QFile::copy(qrImagePath, dest))
+            s->setQrImagePath(dest);
+        m_platform->saveToDisk();
+    }
+
+    QString qrMsg = s->hasQr()
+        ? QString::fromUtf8("\u2705 QR uploaded — your customers can pay online.")
+        : QString::fromUtf8("\u26a0\ufe0f No QR uploaded — customers will see COD only.");
+
     QMessageBox::information(this, "Shop Created!",
-                             "Seller account created!\nStore: " + s->getStoreName() +
-                                 "\nID: " + QString::number(s->getId()) +
-                                 "\nAn admin will verify your account soon.");
+        QString::fromUtf8("Seller account created!\nStore: %1\nID: %2\n\n%3\n\nAn admin will verify your account soon.")
+            .arg(s->getStoreName())
+            .arg(s->getId())
+            .arg(qrMsg));
 }
 
 void MainWindow::onLogout() {

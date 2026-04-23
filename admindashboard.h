@@ -28,6 +28,7 @@ private slots:
     void onVerifySeller();
     void onUpdateOrderStatus();
     void onToggleUser();
+    void onSetAdminQr();
 
 private:
     void refreshStats();
@@ -35,8 +36,13 @@ private:
     void refreshOrders();
     void refreshSellers();
     void refreshCustomers();
+    void refreshAdminQrDisplay();
+    void updateAdminQrStatus();
 
     Ui::AdminDashboard* ui;
     Admin*    m_admin;
     Platform* m_platform;
+
+    QLabel* m_adminQrDisplay = nullptr;
+    QLabel* m_adminQrStatus  = nullptr;
 };

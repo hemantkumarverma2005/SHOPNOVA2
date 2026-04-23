@@ -170,7 +170,11 @@ void ShopCard::mousePressEvent(QMouseEvent* e)
     emit clicked(m_seller);
 }
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 void ShopCard::enterEvent(QEnterEvent* e)
+#else
+void ShopCard::enterEvent(QEvent* e)
+#endif
 {
     QFrame::enterEvent(e);
     setStyleSheet(QString(R"(

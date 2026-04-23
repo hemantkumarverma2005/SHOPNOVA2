@@ -23,13 +23,6 @@ set(PROJECT_SOURCES
         sellerdashboard.ui
         admindashboard.ui
         customerdashboard.ui
-        ${TS_FILES}
-)
-
-if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    qt_add_executable(SHOPNOVA2
-        MANUAL_FINALIZATION
-        ${PROJECT_SOURCES}
         datastore.h
         admindashboard.h
         customerdashboard.h
@@ -58,6 +51,13 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         cartpanel.h
         cartpanel.cpp
         resources.qrc
+        ${TS_FILES}
+)
+
+if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
+    qt_add_executable(SHOPNOVA2
+        MANUAL_FINALIZATION
+        ${PROJECT_SOURCES}
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET SHOPNOVA2 APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

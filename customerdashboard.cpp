@@ -12,9 +12,7 @@
 #include <QScrollArea>
 #include <QFormLayout>
 #include <QLineEdit>
-#include "productcard.h"
 #include "flowlayout.h"
-#include "productdetaildialog.h"
 
 // ── Helper: create a stat card widget ─────────────────────────
 static QFrame* makeStatCard(const QString& icon, const QString& value,
@@ -222,12 +220,15 @@ void CustomerDashboard::refreshProducts(QVector<Product*> products) {
 
     for (auto* p : products) {
         if (!p->getIsActive()) continue;
-        
-        ProductCard* card = new ProductCard(p, ui->productsContainer);
-        connect(card, &ProductCard::addToCartClicked, 
-                this, &CustomerDashboard::onAddToCartCard);
-        connect(card, &ProductCard::cardClicked,
-                this, &CustomerDashboard::onProductCardClicked);
+
+        int currentQty = 0;
+        for (const CartItem& ci : m_customer->getCart().getItems()) {
+            if (ci.productId == p->getId()) { currentQty = ci.quantity; break; }
+        }
+
+        ItemCard* card = new ItemCard(p, currentQty, ui->productsContainer);
+        connect(card, &ItemCard::quantityChanged,
+                this, &CustomerDashboard::onItemCardQtyChanged);
         
         ui->productsContainer->layout()->addWidget(card);
     }
@@ -318,29 +319,31 @@ void CustomerDashboard::onClearSearch() {
     refreshProducts();
 }
 
-void CustomerDashboard::onProductCardClicked(int productId) {
-    Product* p = m_platform->getProductById(productId);
-    if (!p) return;
-
-    ProductDetailDialog dlg(p, this);
-    connect(&dlg, &ProductDetailDialog::addToCartRequested,
-            this, &CustomerDashboard::onAddToCartCard);
-    dlg.exec();
-}
-
-void CustomerDashboard::onAddToCartCard(int productId) {
-    Product* p = m_platform->getProductById(productId);
-    if (!p || p->getStock() == 0) {
-        QMessageBox::warning(this, "Cart", "Product is out of stock."); return;
+void CustomerDashboard::onItemCardQtyChanged(Product* product, int qty) {
+    if (!product || !m_customer) return;
+    
+    Cart& cart = m_customer->getCart();
+    if (qty == 0) {
+        cart.removeItem(product->getId());
+    } else {
+        bool found = false;
+        for (CartItem& ci : const_cast<QVector<CartItem>&>(cart.getItems())) {
+            if (ci.productId == product->getId()) {
+                ci.quantity = qty;
+                found = true;
+                break;
+            }
+        }
+        if (!found) cart.addItem(product, qty);
     }
-    bool ok;
-    int qty = QInputDialog::getInt(this, "Add to Cart",
-        QString("How many '%1'? (Available: %2)").arg(p->getName()).arg(p->getStock()),
-        1, 1, p->getStock(), 1, &ok);
-    if (!ok) return;
-    m_customer->getCart().addItem(p, qty);
     refreshCart();
-    QMessageBox::information(this, "Cart", QString::fromUtf8("✅ Added ") + p->getName() + QString::fromUtf8(" × ") + QString::number(qty));
+    
+    // Quick hack to force ShopBrowserWidget's badge to sync if possible
+    if (m_shopNav) {
+        // Just trigger a resize event or something? Or maybe we don't need to tightly couple it,
+        // Since if the user clicks "Browse Shops" it might read the customer cart again.
+        // Actually, ShopNavController reads the Cart size on back/forward.
+    }
 }
 
 void CustomerDashboard::onRemoveFromCart() {

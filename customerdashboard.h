@@ -9,6 +9,7 @@
 #include "datastore.h"
 #include "flowlayout.h"
 #include "shopnavcontroller.h"
+#include "shopdetailwidget.h"
 
 namespace Ui {
 class CustomerDashboard;
@@ -25,8 +26,7 @@ signals:
     void logoutRequested();
 
 private slots:
-    void onAddToCartCard(int productId);
-    void onProductCardClicked(int productId);
+    void onItemCardQtyChanged(Product* product, int qty);
     void onRemoveFromCart();
     void onCheckout();
     void onCancelOrder();

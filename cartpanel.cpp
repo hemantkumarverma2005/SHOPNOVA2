@@ -12,6 +12,8 @@
 #include <QSet>
 #include <QDir>
 #include <QResizeEvent>
+#include <QFormLayout>
+#include <QLineEdit>
 
 namespace PalCart {
     static const QString BG_PANEL  = "#1e1840";
@@ -332,9 +334,45 @@ void CartPanel::onCheckout()
 {
     if (!m_customer || m_customer->getCart().isEmpty()) return;
     if (!m_customer->getDefaultAddress()) {
-        QMessageBox::warning(this, "No Address",
-            "Please add a delivery address in your Profile before checkout.");
-        return;
+        QDialog addrDlg(this);
+        addrDlg.setWindowTitle("Add Delivery Address");
+        addrDlg.setFixedWidth(400);
+        addrDlg.setStyleSheet("QDialog { background: #1e1840; color: white; border-radius: 16px; }"
+                              "QLabel { color: #9590b8; font-weight: 600; }"
+                              "QLineEdit { background: rgba(255,255,255,0.07); color: white; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 6px; }");
+        QFormLayout* form = new QFormLayout(&addrDlg);
+        
+        QLineEdit* streetEdit = new QLineEdit(&addrDlg);
+        QLineEdit* cityEdit = new QLineEdit(&addrDlg);
+        QLineEdit* stateEdit = new QLineEdit(&addrDlg);
+        QLineEdit* pinEdit = new QLineEdit(&addrDlg);
+        QLineEdit* countryEdit = new QLineEdit(&addrDlg);
+        
+        form->addRow("Street:", streetEdit);
+        form->addRow("City:", cityEdit);
+        form->addRow("State:", stateEdit);
+        form->addRow("Pincode:", pinEdit);
+        form->addRow("Country:", countryEdit);
+        
+        QPushButton* saveBtn = new QPushButton("Save Address", &addrDlg);
+        saveBtn->setStyleSheet("background: #7c5cfc; color: white; padding: 10px; border-radius: 8px; font-weight: bold;");
+        form->addRow(saveBtn);
+        
+        connect(saveBtn, &QPushButton::clicked, &addrDlg, &QDialog::accept);
+        
+        if (addrDlg.exec() == QDialog::Accepted) {
+            QString street = streetEdit->text().trimmed();
+            QString city = cityEdit->text().trimmed();
+            if (street.isEmpty() || city.isEmpty()) {
+                QMessageBox::warning(this, "Error", "Street and City are required!");
+                return;
+            }
+            Address newAddr{street, city, stateEdit->text().trimmed(), pinEdit->text().trimmed(), countryEdit->text().trimmed()};
+            m_customer->addAddress(newAddr);
+            m_platform->saveToDisk();
+        } else {
+            return;
+        }
     }
 
     const QVector<CartItem>& cartItems = m_customer->getCart().getItems();

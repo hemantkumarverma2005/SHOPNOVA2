@@ -10,6 +10,8 @@
 #include <QGroupBox>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QFormLayout>
+#include <QLineEdit>
 #include "productcard.h"
 #include "flowlayout.h"
 #include "productdetaildialog.h"
@@ -356,8 +358,46 @@ void CustomerDashboard::onCheckout() {
 
     Address* addr = m_customer->getDefaultAddress();
     if (!addr) {
-        QMessageBox::warning(this, "Checkout",
-            "No delivery address on file. Add one in your profile."); return;
+        QDialog addrDlg(this);
+        addrDlg.setWindowTitle("Add Delivery Address");
+        addrDlg.setFixedWidth(400);
+        addrDlg.setStyleSheet("QDialog { background: #1a1a2e; color: white; border-radius: 16px; }"
+                              "QLabel { color: #9590b8; font-weight: 600; }"
+                              "QLineEdit { background: #161630; color: white; border: 1px solid #2a2a42; border-radius: 8px; padding: 6px; }");
+        QFormLayout* form = new QFormLayout(&addrDlg);
+        
+        QLineEdit* streetEdit = new QLineEdit(&addrDlg);
+        QLineEdit* cityEdit = new QLineEdit(&addrDlg);
+        QLineEdit* stateEdit = new QLineEdit(&addrDlg);
+        QLineEdit* pinEdit = new QLineEdit(&addrDlg);
+        QLineEdit* countryEdit = new QLineEdit(&addrDlg);
+        
+        form->addRow("Street:", streetEdit);
+        form->addRow("City:", cityEdit);
+        form->addRow("State:", stateEdit);
+        form->addRow("Pincode:", pinEdit);
+        form->addRow("Country:", countryEdit);
+        
+        QPushButton* saveBtn = new QPushButton("Save Address", &addrDlg);
+        saveBtn->setStyleSheet("background: #ff6b2b; color: white; padding: 10px; border-radius: 8px; font-weight: bold;");
+        form->addRow(saveBtn);
+        
+        connect(saveBtn, &QPushButton::clicked, &addrDlg, &QDialog::accept);
+        
+        if (addrDlg.exec() == QDialog::Accepted) {
+            QString street = streetEdit->text().trimmed();
+            QString city = cityEdit->text().trimmed();
+            if (street.isEmpty() || city.isEmpty()) {
+                QMessageBox::warning(this, "Error", "Street and City are required!");
+                return;
+            }
+            Address newAddr{street, city, stateEdit->text().trimmed(), pinEdit->text().trimmed(), countryEdit->text().trimmed()};
+            m_customer->addAddress(newAddr);
+            m_platform->saveToDisk();
+            addr = m_customer->getDefaultAddress();
+        } else {
+            return;
+        }
     }
 
     QStringList methods = {"Cash on Delivery (COD)", "UPI", "Credit/Debit Card",

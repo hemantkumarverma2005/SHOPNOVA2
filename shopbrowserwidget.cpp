@@ -321,9 +321,9 @@ void ShopBrowserWidget::buildHeader()
 
     // Cart button with badge
     QWidget* cartWrapper = new QWidget(header);
-    cartWrapper->setFixedSize(44, 44);
-    m_cartBtn = new QPushButton("🛒", cartWrapper);
-    m_cartBtn->setFixedSize(44, 44);
+    cartWrapper->setFixedSize(100, 44);
+    m_cartBtn = new QPushButton("🛒 Cart", cartWrapper);
+    m_cartBtn->setFixedSize(100, 44);
     m_cartBtn->setCursor(Qt::PointingHandCursor);
     m_cartBtn->setStyleSheet(QString(R"(
         QPushButton {
@@ -342,7 +342,7 @@ void ShopBrowserWidget::buildHeader()
 
     m_cartBadge = new QLabel("0", cartWrapper);
     m_cartBadge->setFixedSize(18, 18);
-    m_cartBadge->move(26, 0);
+    m_cartBadge->move(82, 0); // Position at top right of the 100px wide button
     m_cartBadge->setAlignment(Qt::AlignCenter);
     m_cartBadge->setStyleSheet(QString(R"(
         background: %1;

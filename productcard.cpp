@@ -37,7 +37,7 @@ ProductCard::ProductCard(const Product* product, QWidget *parent)
         imagePath.replace("\\", "/");
         imageContainer->setStyleSheet(QString(
             "QFrame {"
-            "  border-image: url(%1) 0 0 0 0 stretch stretch;"
+            "  border-image: url('%1') 0 0 0 0 stretch stretch;"
             "  border-top-left-radius: 12px;"
             "  border-top-right-radius: 12px;"
             "}"

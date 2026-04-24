@@ -333,9 +333,9 @@ void ShopDetailWidget::buildHeader()
 
     // Cart btn
     QWidget* cartWrapper = new QWidget(header);
-    cartWrapper->setFixedSize(40, 40);
-    QPushButton* cartBtn = new QPushButton("🛒", cartWrapper);
-    cartBtn->setFixedSize(40, 40);
+    cartWrapper->setFixedSize(100, 44);
+    QPushButton* cartBtn = new QPushButton("🛒 Cart", cartWrapper);
+    cartBtn->setFixedSize(100, 44);
     cartBtn->setCursor(Qt::PointingHandCursor);
     cartBtn->setStyleSheet(QString(R"(
         QPushButton {
@@ -348,8 +348,8 @@ void ShopDetailWidget::buildHeader()
     connect(cartBtn, &QPushButton::clicked, this, &ShopDetailWidget::cartBtnClicked);
 
     m_cartBadge = new QLabel("0", cartWrapper);
-    m_cartBadge->setFixedSize(16, 16);
-    m_cartBadge->move(24, 0);
+    m_cartBadge->setFixedSize(18, 18);
+    m_cartBadge->move(82, 0); // Position at top right of the 100px wide button
     m_cartBadge->setAlignment(Qt::AlignCenter);
     m_cartBadge->setStyleSheet(QString(R"(
         background: %1; color: white; border-radius: 8px;

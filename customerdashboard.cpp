@@ -117,8 +117,21 @@ CustomerDashboard::CustomerDashboard(Customer* customer, Platform* platform, QWi
     // Insert after notifLabel (index 2 in homeLay)
     ui->homeLay->insertLayout(3, quickLinks);
 
-    // Setup Shop Page Combo and layout
-    ui->catCombo->addItems({"All", "Electronics", "Clothing", "Books"});
+    // Setup Shop Page Combo dynamically
+    QStringList categories;
+    categories << "All";
+    QSet<QString> uniqueCats;
+    for (auto& p : m_platform->getAllProducts()) {
+        if (p->getIsActive() && !uniqueCats.contains(p->getCategory())) {
+            uniqueCats.insert(p->getCategory());
+            categories << p->getCategory();
+        }
+    }
+    categories.sort(Qt::CaseInsensitive);
+    // Ensure "All" is always at the top
+    categories.removeAll("All");
+    categories.prepend("All");
+    ui->catCombo->addItems(categories);
     new FlowLayout(ui->productsContainer, 0, 20, 20); // Add FlowLayout to the container
     
     // Setup tables
@@ -211,7 +224,7 @@ void CustomerDashboard::refresh() {
 }
 
 void CustomerDashboard::refreshProducts(QVector<Product*> products) {
-    if (products.isEmpty()) {
+    if (products.isEmpty() && ui->searchEdit->text().trimmed().isEmpty() && ui->catCombo->currentText() == "All") {
         for (auto& p : m_platform->getAllProducts())
             if (p->getIsActive()) products.append(p.get());
     }

@@ -184,12 +184,12 @@ void CartPanel::buildPanel()
     hhl->addLayout(titleCol);
     hhl->addStretch();
 
-    QPushButton* closeBtn = new QPushButton("✕", hdr);
-    closeBtn->setFixedSize(36,36);
+    QPushButton* closeBtn = new QPushButton("Close", hdr);
+    closeBtn->setFixedSize(60,36);
     closeBtn->setCursor(Qt::PointingHandCursor);
     closeBtn->setStyleSheet(R"(
         QPushButton { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
-            border-radius: 18px; color: white; font-size: 14px; }
+            border-radius: 18px; color: white; font-size: 13px; font-weight: 600; }
         QPushButton:hover { background: rgba(255,255,255,0.2); }
     )");
     connect(closeBtn, &QPushButton::clicked, this, &CartPanel::closeRequested);

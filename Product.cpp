@@ -1,3 +1,4 @@
+//product structure
 #include "Product.h"
 
 Product::Product(int id, QString name, int price) {
